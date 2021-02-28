@@ -6,22 +6,37 @@ using static UnityEngine.Mathf;
 [RequireComponent(typeof(CapsuleCollider2D))]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteRenderer))]
-class PlayerController : MonoBehaviour
+sealed class PlayerController : MonoBehaviour
 {
     #region Parameters
-    [SerializeField] private float movementSpeed = 2.5f;
-    [SerializeField] private string horizontal = "Horizontal";
+    [SerializeField] private float movementSpeed = 2.5f, jumpForce = 2.5f, checkGroundDistance = 0.4f;
+    [SerializeField] private string horizontal = "Horizontal", jump = "Jump";
+    [SerializeField] private LayerMask whatIsGround;
     [SerializeField] private PlayerAnimatorController animatorController;
 
+    private float horizontalAxis = 0.0f;
     private Animator animator = null;
     private CapsuleCollider2D capsuleCollider2D = null;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
+
+    public static PlayerController Instance { get; private set; }
     #endregion
 
     #region MonoBehaviour API
     private void Awake()
     {
+        #region Singleton
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
+        }
+        #endregion
+
         animator = GetComponent<Animator>();
         capsuleCollider2D = GetComponent<CapsuleCollider2D>();
         rigidBody2D = GetComponent<Rigidbody2D>();
@@ -30,42 +45,60 @@ class PlayerController : MonoBehaviour
         rigidBody2D.freezeRotation = true;
     }
 
-
     private void Update()
     {
+        horizontalAxis = GetAxis(horizontal);
+
         MovePlayer();
         AnimatePlayer();
     }
     #endregion
 
     #region Custom methods
+    private bool CheckGround()
+    {
+        if (Physics2D.Raycast(transform.position, Vector2.down, checkGroundDistance, whatIsGround))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     private void AnimatePlayer()
     {
-        animator.SetFloat(animatorController.movementSpeed, Abs(GetAxis(horizontal)));
+        animator.SetFloat(animatorController.movementSpeed, Abs(horizontalAxis));
     }
 
     private void MovePlayer()
     {
-        float horizontalAxis = GetAxis(horizontal);
+        Vector2 playerInput = new Vector2(horizontalAxis * movementSpeed, 0.0f);
 
-        if (horizontalAxis < 0.0f)
+        if (CheckGround())
+        {
+            rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
+            if (GetButtonDown(jump))
+            {
+                rigidBody2D.velocity = playerInput + (Vector2.up * jumpForce);
+            }
+        }
+
+        if (rigidBody2D.velocity.x < -0.01f)
         {
             spriteRenderer.flipX = true;
         }
-        else
+        else if (rigidBody2D.velocity.x > 0.01f)
         {
             spriteRenderer.flipX = false;
         }
-
-        Vector2 playerInput = new Vector2(horizontalAxis * movementSpeed, 0.0f);
-
-        rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
     }
     #endregion
 
     #region Inner classes
     [System.Serializable]
-    class PlayerAnimatorController
+    sealed class PlayerAnimatorController
     {
         [SerializeField] internal string movementSpeed = "Movement speed";
     }
