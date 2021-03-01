@@ -1,6 +1,7 @@
 using UnityEngine;
 using static UnityEngine.Input;
 using static UnityEngine.Mathf;
+using static UnityEngine.Gizmos;
 
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(CapsuleCollider2D))]
@@ -9,16 +10,22 @@ using static UnityEngine.Mathf;
 sealed class PlayerController : MonoBehaviour
 {
     #region Parameters
-    [SerializeField] private float movementSpeed = 2.5f, jumpForce = 2.5f, checkGroundDistance = 0.4f;
+    [SerializeField]
+    private float movementSpeed = 2.5f, jumpForce = 2.5f, checkGroundDistance = 0.4f, wallCheckDistance = 0.25f,
+        climbSpeed = 1.5f;
     [SerializeField] private string horizontal = "Horizontal", jump = "Jump";
+    [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
     [SerializeField] private LayerMask whatIsGround;
+    [SerializeField] private Transform ledge;
     [SerializeField] private PlayerAnimatorController animatorController;
 
-    private float horizontalAxis = 0.0f;
     private Animator animator = null;
+    private bool isClimbed = false, isGrounded, isTouchingLedge, isTouchingWall;
     private CapsuleCollider2D capsuleCollider2D = null;
+    private float horizontalAxis = 0.0f;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
+    private Vector2 climbStart, climbEnd;
 
     public static PlayerController Instance { get; private set; }
     #endregion
@@ -49,34 +56,63 @@ sealed class PlayerController : MonoBehaviour
     {
         horizontalAxis = GetAxis(horizontal);
 
+        CheckEnvironment();
         MovePlayer();
-        AnimatePlayer();
+        Climb();
+    }
+
+    private void OnDrawGizmos()
+    {
+        color = Color.red;
+        if (spriteRenderer != null)
+        {
+            DrawLine(transform.position, spriteRenderer.flipX ? transform.position + (-transform.right) : transform.position + transform.right);
+            DrawLine(ledge.position, spriteRenderer.flipX ? ledge.position + (-ledge.right) : ledge.position + ledge.right);
+        }
     }
     #endregion
 
     #region Custom methods
-    private bool CheckGround()
+    private void Climb()
     {
-        if (Physics2D.Raycast(transform.position, Vector2.down, checkGroundDistance, whatIsGround))
+        if (!isTouchingLedge && isTouchingWall && !isClimbed && GetButtonDown(jump))
         {
-            return true;
+            isClimbed = true;
+            climbStart = transform.position;
+            climbEnd = transform.position + (Vector3)climbPoint;
         }
-        else
+
+        if (isClimbed)
         {
-            return false;
+            transform.position = Vector3.Lerp(climbStart, climbEnd, Time.deltaTime * climbSpeed);
+
+            animator.SetBool(animatorController.canClimb, isClimbed);
         }
     }
 
-    private void AnimatePlayer()
+    private void CheckEnvironment()
     {
-        animator.SetFloat(animatorController.movementSpeed, Abs(horizontalAxis));
+        isGrounded = Physics2D.Raycast(transform.position, -transform.up, checkGroundDistance, whatIsGround);
+
+        isTouchingLedge = Physics2D.Raycast(ledge.position, spriteRenderer.flipX ? ledge.position + (-ledge.right) : ledge.position + ledge.right,
+            wallCheckDistance, whatIsGround);
+        isTouchingWall = Physics2D.Raycast(transform.position, spriteRenderer.flipX ? -transform.right : transform.right,
+            wallCheckDistance, whatIsGround);
+    }
+
+    //Executable method in animation Climb as an event 
+    private void FinishClimb()
+    {
+        isClimbed = false;
+
+        animator.SetBool(animatorController.canClimb, isClimbed);
     }
 
     private void MovePlayer()
     {
         Vector2 playerInput = new Vector2(horizontalAxis * movementSpeed, 0.0f);
 
-        if (CheckGround())
+        if (isGrounded)
         {
             rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
             if (GetButtonDown(jump))
@@ -93,6 +129,8 @@ sealed class PlayerController : MonoBehaviour
         {
             spriteRenderer.flipX = false;
         }
+
+        animator.SetFloat(animatorController.movementSpeed, Abs(horizontalAxis));
     }
     #endregion
 
@@ -101,6 +139,7 @@ sealed class PlayerController : MonoBehaviour
     sealed class PlayerAnimatorController
     {
         [SerializeField] internal string movementSpeed = "Movement speed";
+        [SerializeField] internal string canClimb = "Can climb";
     }
     #endregion
 }
