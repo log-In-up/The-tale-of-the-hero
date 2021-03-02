@@ -188,11 +188,12 @@ MonoBehaviour:
   movementSpeed: 2.5
   jumpForce: 2.5
   checkGroundDistance: 0.4
-  wallCheckDistance: 0.25
-  climbSpeed: 1.5
+  wallCheckDistance: 0.26
+  climbTime: 1.5
+  ledgeCheckDistance: 0.36
   horizontal: Horizontal
   jump: Jump
-  climbPoint: {x: 0.3, y: 0.69}
+  climbPoint: {x: 0.3, y: 0.7}
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
