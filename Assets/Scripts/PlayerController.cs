@@ -17,7 +17,7 @@ sealed class PlayerController : MonoBehaviour
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
     [SerializeField] private LayerMask whatIsGround;
     [SerializeField] private Transform ledge;
-    [SerializeField] private PlayerAnimatorController animatorController;
+    [SerializeField] private PlayerAnimatorParameters animatorParameters;
 
     private Animator animator = null;
     private bool isClimbed = false, isGrounded, isTouchingLedge, isTouchingWall;
@@ -46,9 +46,13 @@ sealed class PlayerController : MonoBehaviour
         animator = GetComponent<Animator>();
         capsuleCollider2D = GetComponent<CapsuleCollider2D>();
         rigidBody2D = GetComponent<Rigidbody2D>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
+        spriteRenderer = GetComponent<SpriteRenderer>();        
+    }
 
+    private void Start()
+    {
         rigidBody2D.freezeRotation = true;
+        spriteRenderer.flipX = false;
     }
 
     private void Update()
@@ -94,7 +98,7 @@ sealed class PlayerController : MonoBehaviour
 
         if (isClimbed)
         {
-            animator.SetBool(animatorController.canClimb, isClimbed);
+            animator.SetBool(animatorParameters.canClimb, isClimbed);
         }
     }
 
@@ -118,7 +122,7 @@ sealed class PlayerController : MonoBehaviour
         capsuleCollider2D.enabled = true;
         rigidBody2D.gravityScale = 1;
 
-        animator.SetBool(animatorController.canClimb, isClimbed);
+        animator.SetBool(animatorParameters.canClimb, isClimbed);
     }
 
     private void MovePlayer()
@@ -143,13 +147,13 @@ sealed class PlayerController : MonoBehaviour
             spriteRenderer.flipX = false;
         }
 
-        animator.SetFloat(animatorController.movementSpeed, Abs(GetAxis(horizontal)));
+        animator.SetFloat(animatorParameters.movementSpeed, Abs(GetAxis(horizontal)));
     }
     #endregion
 
     #region Inner classes
     [System.Serializable]
-    sealed class PlayerAnimatorController
+    sealed class PlayerAnimatorParameters
     {
         [SerializeField] internal string movementSpeed = "Movement speed";
         [SerializeField] internal string canClimb = "Can climb";
