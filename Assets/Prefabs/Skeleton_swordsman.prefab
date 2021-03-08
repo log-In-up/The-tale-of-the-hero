@@ -50,13 +50,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animatorParameters:
     movementSpeed: Movement speed
+    attackValue: Attack value
+    isAttaking: Is attaking
   wallCheckDistance: 0.3
   groundCheckDistance: 0.3
+  attackDistance: 0.6
+  playerCheckDistance: 4
   movementSpeed: 1
+  idleTime: 2.5
   groundCheck: {fileID: 3860824241280616502}
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
+  whatIsPlayer:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!95 &3369061295830752633
 Animator:
   serializedVersion: 3

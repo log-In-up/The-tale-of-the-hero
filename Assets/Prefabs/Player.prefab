@@ -44,7 +44,7 @@ GameObject:
   - component: {fileID: 4897345871569224437}
   - component: {fileID: 4475492954551982903}
   - component: {fileID: 779212818058633443}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -189,7 +189,6 @@ MonoBehaviour:
   jumpForce: 2.5
   checkGroundDistance: 0.4
   wallCheckDistance: 0.26
-  climbTime: 1.5
   ledgeCheckDistance: 0.36
   horizontal: Horizontal
   jump: Jump
@@ -198,6 +197,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   ledge: {fileID: 8542569937667888346}
-  animatorController:
+  animatorParameters:
     movementSpeed: Movement speed
     canClimb: Can climb

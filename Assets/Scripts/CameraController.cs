@@ -6,8 +6,6 @@ sealed class CameraController : MonoBehaviour
     #region Parameters
     [SerializeField] private float cameraSpeed = 2.0f;
 
-    private Camera playerCamera = null;
-
     public static CameraController Instance { get; private set; }
     #endregion
 
@@ -24,8 +22,6 @@ sealed class CameraController : MonoBehaviour
             Instance = this;
         }
         #endregion
-
-        playerCamera = GetComponent<Camera>();
     }
 
     private void Update()

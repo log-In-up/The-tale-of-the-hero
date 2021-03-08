@@ -19,8 +19,9 @@ sealed class PlayerController : MonoBehaviour
     [SerializeField] private Transform ledge;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
 
-    private Animator animator = null;
     private bool isClimbed = false, isGrounded, isTouchingLedge, isTouchingWall;
+
+    private Animator animator = null;
     private CapsuleCollider2D capsuleCollider2D = null;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
@@ -59,7 +60,7 @@ sealed class PlayerController : MonoBehaviour
     {
         CheckEnvironment();
 
-        //this method must be called before the MovePlayer method
+        //Climb method must be called before the MovePlayer method
         Climb(); 
         MovePlayer();
     }
@@ -91,8 +92,7 @@ sealed class PlayerController : MonoBehaviour
             }
             else
             {
-                climbEnd.x = transform.position.x + climbPoint.x;
-                climbEnd.y = transform.position.y + climbPoint.y;
+                climbEnd = transform.position + (Vector3)climbPoint;
             }
         }
 

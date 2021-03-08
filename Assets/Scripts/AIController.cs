@@ -1,5 +1,7 @@
+using System.Collections;
 using UnityEngine;
 using static UnityEngine.Mathf;
+using static UnityEngine.Physics2D;
 
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(CapsuleCollider2D))]
@@ -9,18 +11,25 @@ sealed class AIController : MonoBehaviour
 {
     #region Parameters
     [SerializeField] private AIAnimatorParameters animatorParameters;
-    [SerializeField] private float wallCheckDistance = 0.25f, groundCheckDistance = 0.5f, movementSpeed = 1.0f;
+    [SerializeField] private int maxHealthPoints = 100;
+    [SerializeField]
+    private float wallCheckDistance = 0.25f, groundCheckDistance = 0.5f, attackDistance = 0.6f, playerCheckDistance = 4.0f, movementSpeed = 1.0f,
+        idleTime = 2.5f;
     [SerializeField] private Transform groundCheck = null;
-    [SerializeField] private LayerMask whatIsGround;
+    [SerializeField] private LayerMask whatIsGround, whatIsPlayer;
 
     private enum AIState { Chaising, Dead, Hit, Idle, Walking }
-    private AIState currentState;
+    private AIState currentState = AIState.Idle;
+
+    private bool wallDetected, isGrounded, isIdle, playerDetected, canAttack;
+    private int randomAttackValue = 0, currentHealthPoints;
+    private float delay;
+    private sbyte facingDirection;
+
     private Animator animator = null;
-    private bool wallDetected, isGrounded;
     private CapsuleCollider2D capsuleCollider = null;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
-    private sbyte facingDirection;
     private Vector2 movement;
     #endregion
 
@@ -35,15 +44,23 @@ sealed class AIController : MonoBehaviour
 
     private void Start()
     {
-        currentState = AIState.Walking;
+        currentState = AIState.Idle;
+        isIdle = true;
+
         rigidBody2D.freezeRotation = true;
         spriteRenderer.flipX = false;
 
+        currentHealthPoints = maxHealthPoints;
         facingDirection = 1;
     }
 
     private void Update()
     {
+        if (currentHealthPoints <= 0)
+        {
+            SwitchState(AIState.Dead);
+        }
+
         switch (currentState)
         {
             case AIState.Chaising:
@@ -65,20 +82,45 @@ sealed class AIController : MonoBehaviour
     }
     #endregion
 
-    #region Attaking state
+    #region Chaising state
     private void EnterChaisingState()
     {
-
+        playerDetected = false;
+        canAttack = false;
     }
 
     private void UpdateChaisingState()
     {
+        playerDetected = Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer);
+        canAttack = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
 
+        if (playerDetected)
+        {
+            if (canAttack)
+            {
+                //Attack
+                rigidBody2D.velocity = Vector2.zero;
+                animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
+
+                animator.SetBool(animatorParameters.isAttaking, canAttack);
+                animator.SetInteger(animatorParameters.attackValue, randomAttackValue);
+            }
+            else
+            {
+                animator.SetBool(animatorParameters.isAttaking, canAttack);
+                Movement();
+            }
+        }
+        else
+        {
+            SwitchState(AIState.Idle);
+        }
     }
 
     private void ExitChaisingState()
     {
-
+        playerDetected = false;
+        canAttack = false;
     }
     #endregion
 
@@ -119,52 +161,81 @@ sealed class AIController : MonoBehaviour
     #region Idle state
     private void EnterIdleState()
     {
-
+        isIdle = true;
     }
 
     private void UpdateIdleState()
     {
+        rigidBody2D.velocity = Vector2.zero;
+        animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
 
+        if (isIdle)
+        {
+            StartCoroutine(WhileWaiting(idleTime, AIState.Walking));
+            isIdle = false;
+        }
     }
 
     private void ExitIdleState()
     {
-
+        isIdle = false;
     }
     #endregion
 
     #region Walking state
     private void EnterWalkingState()
     {
-
+        isGrounded = false;
+        wallDetected = false;
     }
 
     private void UpdateWalkingState()
     {
-        isGrounded = Physics2D.Raycast(groundCheck.position, Vector2.down, groundCheckDistance, whatIsGround);
-        wallDetected = Physics2D.Raycast(transform.position, transform.right, wallCheckDistance, whatIsGround);
+        isGrounded = Raycast(groundCheck.position, Vector2.down, groundCheckDistance, whatIsGround);
+        wallDetected = Raycast(transform.position, transform.right, wallCheckDistance, whatIsGround);
 
         if (!isGrounded || wallDetected)
         {
-            facingDirection *= -1; 
-            transform.Rotate(0.0f, 180.0f, 0.0f);
+            Rotation();
         }
         else
         {
-            movement.Set(movementSpeed * facingDirection, rigidBody2D.velocity.y);
-            rigidBody2D.velocity = movement;
+            Movement();
+        }
 
-            animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
+        if (Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer))
+        {
+            SwitchState(AIState.Chaising);
         }
     }
 
     private void ExitWalkingState()
     {
-
+        animator.SetFloat(animatorParameters.movementSpeed, 0.0f);
     }
     #endregion
 
     #region Other methods
+    private void Rotation()
+    {
+        facingDirection *= -1;
+        transform.Rotate(0.0f, 180.0f, 0.0f);
+    }
+
+    private void Movement()
+    {
+        movement.Set(movementSpeed * facingDirection, rigidBody2D.velocity.y);
+        rigidBody2D.velocity = movement;
+
+        animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
+    }
+
+    //Executable method in animation Attack(A, B) as an event 
+    private void NextAttack()
+    {
+        randomAttackValue = Random.Range(0, 2);
+    }
+
     private void SwitchState(AIState state)
     {
         switch (currentState)
@@ -204,8 +275,14 @@ sealed class AIController : MonoBehaviour
                 EnterWalkingState();
                 break;
         }
-
         currentState = state;
+    }
+
+    private IEnumerator WhileWaiting(float waitingTime, AIState state)
+    {
+        yield return new WaitForSeconds(waitingTime);
+
+        SwitchState(state);
     }
     #endregion
 
@@ -214,6 +291,8 @@ sealed class AIController : MonoBehaviour
     class AIAnimatorParameters
     {
         [SerializeField] internal string movementSpeed = "Movement speed";
+        [SerializeField] internal string attackValue = "Attack value";
+        [SerializeField] internal string isAttaking = "Is attaking";
     }
     #endregion
 }
