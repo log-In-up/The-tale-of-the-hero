@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3390495203849559111}
   - component: {fileID: 6564087336962278469}
   - component: {fileID: 7936576693734799251}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Dark_slime
   m_TagString: Untagged
   m_Icon: {fileID: 0}

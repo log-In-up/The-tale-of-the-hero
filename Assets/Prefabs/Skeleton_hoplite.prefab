@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 9167031145943220267}
   - component: {fileID: 9167031145943220265}
   - component: {fileID: 9167031145943220266}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Skeleton_hoplite
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -11,10 +11,9 @@ sealed class AIController : MonoBehaviour
 {
     #region Parameters
     [SerializeField] private AIAnimatorParameters animatorParameters;
-    [SerializeField] private int maxHealthPoints = 100;
     [SerializeField]
     private float wallCheckDistance = 0.25f, groundCheckDistance = 0.5f, attackDistance = 0.6f, playerCheckDistance = 4.0f, movementSpeed = 1.0f,
-        idleTime = 2.5f;
+        idleTime = 2.5f, maxHealthPoints = 100, damage = 5;
     [SerializeField] private Transform groundCheck = null;
     [SerializeField] private LayerMask whatIsGround, whatIsPlayer;
 
@@ -22,8 +21,7 @@ sealed class AIController : MonoBehaviour
     private AIState currentState = AIState.Idle;
 
     private bool wallDetected, isGrounded, isIdle, playerDetected, canAttack;
-    private int randomAttackValue = 0, currentHealthPoints;
-    private float delay;
+    private float currentHealthPoints, randomAttackValue;
     private sbyte facingDirection;
 
     private Animator animator = null;
@@ -44,6 +42,8 @@ sealed class AIController : MonoBehaviour
 
     private void Start()
     {
+        animator.SetBool(animatorParameters.isAllive, true);
+
         currentState = AIState.Idle;
         isIdle = true;
 
@@ -51,12 +51,13 @@ sealed class AIController : MonoBehaviour
         spriteRenderer.flipX = false;
 
         currentHealthPoints = maxHealthPoints;
+        randomAttackValue = 1.0f;
         facingDirection = 1;
     }
 
     private void Update()
     {
-        if (currentHealthPoints <= 0)
+        if (currentHealthPoints <= 0.0f)
         {
             SwitchState(AIState.Dead);
         }
@@ -103,10 +104,11 @@ sealed class AIController : MonoBehaviour
                 animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
 
                 animator.SetBool(animatorParameters.isAttaking, canAttack);
-                animator.SetInteger(animatorParameters.attackValue, randomAttackValue);
+                animator.SetFloat(animatorParameters.attackValue, randomAttackValue);
             }
             else
             {
+                animator.SetFloat(animatorParameters.attackValue, 0.0f);
                 animator.SetBool(animatorParameters.isAttaking, canAttack);
                 Movement();
             }
@@ -127,7 +129,13 @@ sealed class AIController : MonoBehaviour
     #region Dead state
     private void EnterDeadState()
     {
+        capsuleCollider.enabled = false;
 
+        rigidBody2D.velocity = Vector2.zero;
+        rigidBody2D.gravityScale = 0.0f;
+
+        animator.SetBool(animatorParameters.isAttaking, false);
+        animator.SetBool(animatorParameters.isAllive, false);
     }
 
     private void UpdateDeadState()
@@ -137,7 +145,13 @@ sealed class AIController : MonoBehaviour
 
     private void ExitDeadState()
     {
+        currentHealthPoints = maxHealthPoints;
 
+        capsuleCollider.enabled = true;
+
+        rigidBody2D.gravityScale = 1.0f;
+
+        animator.SetBool(animatorParameters.isAllive, true);
     }
     #endregion
 
@@ -216,6 +230,11 @@ sealed class AIController : MonoBehaviour
     #endregion
 
     #region Other methods
+    internal void ApplyDamage(float damage)
+    {
+        currentHealthPoints -= damage;
+    }
+
     private void Rotation()
     {
         facingDirection *= -1;
@@ -233,7 +252,7 @@ sealed class AIController : MonoBehaviour
     //Executable method in animation Attack(A, B) as an event 
     private void NextAttack()
     {
-        randomAttackValue = Random.Range(0, 2);
+        randomAttackValue = Round(Random.Range(1.0f, 2.4f));
     }
 
     private void SwitchState(AIState state)
@@ -284,15 +303,25 @@ sealed class AIController : MonoBehaviour
 
         SwitchState(state);
     }
+
+    //Executable method in animation Attack(A, B) as an event 
+    private void DealDamage()
+    {
+        bool isHit = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
+        RaycastHit2D hit = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
+
+        if (isHit && hit.collider.gameObject.GetComponent<PlayerController>() != null)
+        {
+            hit.collider.gameObject.GetComponent<PlayerController>().ApplyDamage(damage);
+        }
+    }
     #endregion
 
     #region Inner classes
     [System.Serializable]
     class AIAnimatorParameters
     {
-        [SerializeField] internal string movementSpeed = "Movement speed";
-        [SerializeField] internal string attackValue = "Attack value";
-        [SerializeField] internal string isAttaking = "Is attaking";
+        [SerializeField] internal string attackValue = "Attack value", isAllive = "Is Allive", isAttaking = "Is attaking", movementSpeed = "Movement speed";
     }
     #endregion
 }

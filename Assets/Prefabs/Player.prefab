@@ -185,18 +185,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3cbc801885aaf8409dfbe31b22a07f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  attackDistance: 0.5
+  attackRate: 1.35
+  checkGroundDistance: 0.4
   movementSpeed: 2.5
   jumpForce: 2.5
-  checkGroundDistance: 0.4
-  wallCheckDistance: 0.26
   ledgeCheckDistance: 0.36
-  horizontal: Horizontal
-  jump: Jump
+  wallCheckDistance: 0.26
+  damage: 50
   climbPoint: {x: 0.3, y: 0.7}
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
+  whatIsEnemy:
+    serializedVersion: 2
+    m_Bits: 256
   ledge: {fileID: 8542569937667888346}
   animatorParameters:
-    movementSpeed: Movement speed
+    attackPattern: Attack pattern
     canClimb: Can climb
+    movementSpeed: Movement speed
+  input:
+    horizontal: Horizontal
+    jump: Jump
+    attack: Fire1

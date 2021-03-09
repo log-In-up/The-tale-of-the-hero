@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8976012981133934831}
   - component: {fileID: 7333153633066600003}
   - component: {fileID: 3369061295830752390}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Skeleton_swordsman
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -49,15 +49,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animatorParameters:
-    movementSpeed: Movement speed
     attackValue: Attack value
+    isAllive: Is Allive
     isAttaking: Is attaking
+    movementSpeed: Movement speed
   wallCheckDistance: 0.3
   groundCheckDistance: 0.3
-  attackDistance: 0.6
+  attackDistance: 0.4
   playerCheckDistance: 4
   movementSpeed: 1
   idleTime: 2.5
+  maxHealthPoints: 100
   groundCheck: {fileID: 3860824241280616502}
   whatIsGround:
     serializedVersion: 2

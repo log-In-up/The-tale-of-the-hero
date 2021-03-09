@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7599745775245212686}
   - component: {fileID: 7599745775245212685}
   - component: {fileID: 7599745775245212684}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Skeleton_spearman
   m_TagString: Untagged
   m_Icon: {fileID: 0}
