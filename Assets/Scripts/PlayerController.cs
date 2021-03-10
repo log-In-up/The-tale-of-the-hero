@@ -12,15 +12,15 @@ sealed class PlayerController : MonoBehaviour
 {
     #region Parameters
     [SerializeField]
-    private float attackDistance = 0.5f, checkGroundDistance = 0.4f, movementSpeed = 2.5f, jumpForce = 2.5f,
-        ledgeCheckDistance = 0.56f, wallCheckDistance = 0.26f, damage = 50.0f, maxHealthPoints = 200.0f;
+    private float attackDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f, jumpForce = 2.5f,
+        ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f;
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
     [SerializeField] private LayerMask whatIsGround, whatIsEnemy;
     [SerializeField] private Transform ledge;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
     [SerializeField] private PlayerInput input;
 
-    private bool isClimbed = false, canAttack = true, isGrounded, isTouchingLedge, isTouchingWall;
+    private bool isGrounded, isTouchingLedge, isTouchingWall, canAttack = true, isClimbed = false;
     private float currentHealthPoints;
 
     private Animator animator = null;
@@ -57,12 +57,21 @@ sealed class PlayerController : MonoBehaviour
         canAttack = true;
         rigidBody2D.freezeRotation = true;
         spriteRenderer.flipX = false;
+        animator.SetBool(animatorParameters.isAlive, true);
 
         currentHealthPoints = maxHealthPoints;
     }
 
     private void Update()
-    {       
+    {
+        if (currentHealthPoints <= 0.0f)
+        {
+            animator.SetBool(animatorParameters.isAlive, false);
+            rigidBody2D.velocity = Vector2.zero;
+
+            return;
+        }
+
         //CheckEnvironment method should be called first
         CheckEnvironment();
 
@@ -75,16 +84,6 @@ sealed class PlayerController : MonoBehaviour
         //Climb method must be called before the MovePlayer method
         Climb();
         MovePlayer();
-    }
-
-    private void OnDrawGizmos()
-    {
-        color = Color.red;
-        if (spriteRenderer != null)
-        {
-            DrawLine(transform.position, spriteRenderer.flipX ? transform.position + (-transform.right) : transform.position + transform.right);
-            DrawLine(ledge.position, spriteRenderer.flipX ? ledge.position + (-ledge.right) : ledge.position + ledge.right);
-        }
     }
     #endregion
 
@@ -99,6 +98,16 @@ sealed class PlayerController : MonoBehaviour
     {
         float attackPattern = Round(Random.Range(1.0f, 4.4f));
         animator.SetFloat(animatorParameters.attackPattern, attackPattern);
+    }
+
+    private void CheckEnvironment()
+    {
+        isGrounded = Raycast(transform.position, -transform.up, checkGroundDistance, whatIsGround);
+
+        isTouchingLedge = Raycast(ledge.position, spriteRenderer.flipX ? ledge.position + (-ledge.right) : ledge.position + ledge.right,
+            ledgeCheckDistance, whatIsGround);
+        isTouchingWall = Raycast(transform.position, spriteRenderer.flipX ? -transform.right : transform.right,
+            wallCheckDistance, whatIsGround);
     }
 
     private void Climb()
@@ -119,24 +128,16 @@ sealed class PlayerController : MonoBehaviour
                 climbEnd = transform.position + (Vector3)climbPoint;
             }
         }
-
         if (isClimbed)
         {
             animator.SetBool(animatorParameters.canClimb, isClimbed);
         }
     }
 
-    private void CheckEnvironment()
-    {
-        isGrounded = Raycast(transform.position, -transform.up, checkGroundDistance, whatIsGround);
-
-        isTouchingLedge = Raycast(ledge.position, spriteRenderer.flipX ? ledge.position + (-ledge.right) : ledge.position + ledge.right,
-            ledgeCheckDistance, whatIsGround);
-        isTouchingWall = Raycast(transform.position, spriteRenderer.flipX ? -transform.right : transform.right,
-            wallCheckDistance, whatIsGround);
-    }
-
-    //Executable method in animation Attack(A-D) as an event
+    /// <summary>
+    /// Executable method in animation Attack(A-D) as an event
+    /// </summary>
+#pragma warning disable IDE0051
     private void DealDamage()
     {
         bool isHit = Raycast(transform.position, spriteRenderer.flipX ? -transform.right : transform.right, attackDistance, whatIsEnemy);
@@ -148,8 +149,11 @@ sealed class PlayerController : MonoBehaviour
         }
     }
 
-    //Executable method in animation Climb as an event
+    /// <summary>
+    /// Executable method in animation Climb as an event
+    /// </summary>
     private void FinishClimb()
+#pragma warning restore IDE0051
     {
         isClimbed = false;
 
@@ -159,13 +163,6 @@ sealed class PlayerController : MonoBehaviour
         rigidBody2D.gravityScale = 1;
 
         animator.SetBool(animatorParameters.canClimb, isClimbed);
-    }
-
-    //Executable method in animation Attack(A-D) as an event
-    private void NextPattern()
-    {
-        canAttack = true;
-        animator.SetFloat(animatorParameters.attackPattern, 0.0f);
     }
 
     private void MovePlayer()
@@ -192,9 +189,28 @@ sealed class PlayerController : MonoBehaviour
 
         animator.SetFloat(animatorParameters.movementSpeed, Abs(input.GetAxisHorizontal));
     }
+
+    /// <summary>
+    /// Executable method in animation Attack(A-D) as an event
+    /// </summary>
+#pragma warning disable IDE0051
+    private void NextPattern()
+#pragma warning restore IDE0051
+    {
+        canAttack = true;
+        animator.SetFloat(animatorParameters.attackPattern, 0.0f);
+    }
+
     #endregion
 
     #region Inner classes
+
+    [System.Serializable]
+    sealed class PlayerAnimatorParameters
+    {
+        [SerializeField] internal string attackPattern = "AttackPattern", canClimb = "CanClimb", isAlive = "IsAlive", movementSpeed = "MovementSpeed";
+    }
+
     [System.Serializable]
     sealed class PlayerInput
     {
@@ -203,12 +219,6 @@ sealed class PlayerController : MonoBehaviour
         internal bool GetButtonDownJump { get { return GetButtonDown(jump); } }
         internal bool GetButtonDownAttack { get { return GetButtonDown(attack); } }
         internal float GetAxisHorizontal { get { return GetAxis(horizontal); } }
-    }
-
-    [System.Serializable]
-    sealed class PlayerAnimatorParameters
-    {
-        [SerializeField] internal string attackPattern = "Attack pattern", canClimb = "Can climb", movementSpeed = "Movement speed";
     }
     #endregion
 }

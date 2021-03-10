@@ -12,15 +12,16 @@ sealed class AIController : MonoBehaviour
     #region Parameters
     [SerializeField] private AIAnimatorParameters animatorParameters;
     [SerializeField]
-    private float wallCheckDistance = 0.25f, groundCheckDistance = 0.5f, attackDistance = 0.6f, playerCheckDistance = 4.0f, movementSpeed = 1.0f,
-        idleTime = 2.5f, maxHealthPoints = 100, damage = 5;
+    private float attackDistance = 0.6f, damage = 5.0f, groundCheckDistance = 0.5f, idleTime = 2.5f,
+        maxHealthPoints = 100.0f, movementSpeed = 1.0f,playerCheckDistance = 4.0f, wallCheckDistance = 0.25f;
     [SerializeField] private Transform groundCheck = null;
     [SerializeField] private LayerMask whatIsGround, whatIsPlayer;
 
     private enum AIState { Chaising, Dead, Hit, Idle, Walking }
     private AIState currentState = AIState.Idle;
+    private AIState previousState;
 
-    private bool wallDetected, isGrounded, isIdle, playerDetected, canAttack;
+    private bool canAttack, isGrounded, isIdle, playerDetected, wallDetected;
     private float currentHealthPoints, randomAttackValue;
     private sbyte facingDirection;
 
@@ -42,7 +43,7 @@ sealed class AIController : MonoBehaviour
 
     private void Start()
     {
-        animator.SetBool(animatorParameters.isAllive, true);
+        animator.SetBool(animatorParameters.isAlive, true);
 
         currentState = AIState.Idle;
         isIdle = true;
@@ -83,6 +84,7 @@ sealed class AIController : MonoBehaviour
     }
     #endregion
 
+    #region Finite State Machine
     #region Chaising state
     private void EnterChaisingState()
     {
@@ -135,7 +137,7 @@ sealed class AIController : MonoBehaviour
         rigidBody2D.gravityScale = 0.0f;
 
         animator.SetBool(animatorParameters.isAttaking, false);
-        animator.SetBool(animatorParameters.isAllive, false);
+        animator.SetBool(animatorParameters.isAlive, false);
     }
 
     private void UpdateDeadState()
@@ -151,24 +153,25 @@ sealed class AIController : MonoBehaviour
 
         rigidBody2D.gravityScale = 1.0f;
 
-        animator.SetBool(animatorParameters.isAllive, true);
+        animator.SetBool(animatorParameters.isAlive, true);
     }
     #endregion
 
     #region Hit state
     private void EnterHitState()
     {
-
+        rigidBody2D.velocity = Vector2.zero;
+        animator.SetBool(animatorParameters.isHit, true);
     }
 
     private void UpdateHitState()
     {
-
+        rigidBody2D.velocity = Vector2.zero;
     }
 
     private void ExitHitState()
-    {
-
+    {        
+        animator.SetBool(animatorParameters.isHit, false);
     }
     #endregion
 
@@ -185,7 +188,7 @@ sealed class AIController : MonoBehaviour
 
         if (isIdle)
         {
-            StartCoroutine(WhileWaiting(idleTime, AIState.Walking));
+            StartCoroutine(ToggleStateByTime(idleTime, AIState.Walking));
             isIdle = false;
         }
     }
@@ -228,17 +231,38 @@ sealed class AIController : MonoBehaviour
         animator.SetFloat(animatorParameters.movementSpeed, 0.0f);
     }
     #endregion
+    #endregion
 
     #region Other methods
     internal void ApplyDamage(float damage)
     {
         currentHealthPoints -= damage;
+
+        previousState = currentState;
+        SwitchState(AIState.Hit);
     }
 
-    private void Rotation()
+    private IEnumerator ToggleStateByTime(float time, AIState state)
     {
-        facingDirection *= -1;
-        transform.Rotate(0.0f, 180.0f, 0.0f);
+        yield return new WaitForSeconds(time);
+
+        SwitchState(state);
+    }
+
+    /// <summary>
+    /// Executable method in animation Attack(A, B) as an event
+    /// </summary>
+#pragma warning disable IDE0051 
+    private void DealDamage()
+#pragma warning restore IDE0051 
+    {
+        bool isHit = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
+        RaycastHit2D hit = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
+
+        if (isHit && hit.collider.gameObject.GetComponent<PlayerController>() != null)
+        {
+            hit.collider.gameObject.GetComponent<PlayerController>().ApplyDamage(damage);
+        }
     }
 
     private void Movement()
@@ -249,10 +273,20 @@ sealed class AIController : MonoBehaviour
         animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
     }
 
-    //Executable method in animation Attack(A, B) as an event 
+    /// <summary>
+    /// Executable method in animation Attack(A, B) as an event
+    /// </summary>
+#pragma warning disable IDE0051 
     private void NextAttack()
+#pragma warning restore IDE0051 
     {
         randomAttackValue = Round(Random.Range(1.0f, 2.4f));
+    }
+
+    private void Rotation()
+    {
+        facingDirection *= -1;
+        transform.Rotate(0.0f, 180.0f, 0.0f);
     }
 
     private void SwitchState(AIState state)
@@ -297,31 +331,20 @@ sealed class AIController : MonoBehaviour
         currentState = state;
     }
 
-    private IEnumerator WhileWaiting(float waitingTime, AIState state)
-    {
-        yield return new WaitForSeconds(waitingTime);
-
-        SwitchState(state);
-    }
-
-    //Executable method in animation Attack(A, B) as an event 
-    private void DealDamage()
-    {
-        bool isHit = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
-        RaycastHit2D hit = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
-
-        if (isHit && hit.collider.gameObject.GetComponent<PlayerController>() != null)
-        {
-            hit.collider.gameObject.GetComponent<PlayerController>().ApplyDamage(damage);
-        }
-    }
+    /// <summary>
+    /// Executable method in animation Hit as an event
+    /// </summary>
+#pragma warning disable IDE0051 
+    private void TerminationOfHit() => SwitchState(previousState);
+#pragma warning restore IDE0051 
     #endregion
 
     #region Inner classes
     [System.Serializable]
     class AIAnimatorParameters
     {
-        [SerializeField] internal string attackValue = "Attack value", isAllive = "Is Allive", isAttaking = "Is attaking", movementSpeed = "Movement speed";
+        [SerializeField] internal string attackValue = "AttackValue", isAlive = "IsAlive", isAttaking = "IsAttaking",
+            isHit = "IsHit", movementSpeed = "MovementSpeed";
     }
     #endregion
 }

@@ -49,17 +49,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animatorParameters:
-    attackValue: Attack value
-    isAllive: Is Allive
-    isAttaking: Is attaking
-    movementSpeed: Movement speed
-  wallCheckDistance: 0.3
-  groundCheckDistance: 0.3
+    attackValue: AttackValue
+    isAlive: IsAlive
+    isAttaking: IsAttaking
+    isHit: IsHit
+    movementSpeed: MovementSpeed
   attackDistance: 0.4
-  playerCheckDistance: 4
-  movementSpeed: 1
+  damage: 5
+  groundCheckDistance: 0.3
   idleTime: 2.5
   maxHealthPoints: 100
+  movementSpeed: 1
+  playerCheckDistance: 4
+  wallCheckDistance: 0.3
   groundCheck: {fileID: 3860824241280616502}
   whatIsGround:
     serializedVersion: 2

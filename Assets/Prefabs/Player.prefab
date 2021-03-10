@@ -186,13 +186,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackDistance: 0.5
-  attackRate: 1.35
   checkGroundDistance: 0.4
-  movementSpeed: 2.5
+  damage: 50
   jumpForce: 2.5
   ledgeCheckDistance: 0.36
+  maxHealthPoints: 200
+  movementSpeed: 2.5
   wallCheckDistance: 0.26
-  damage: 50
   climbPoint: {x: 0.3, y: 0.7}
   whatIsGround:
     serializedVersion: 2
@@ -202,9 +202,10 @@ MonoBehaviour:
     m_Bits: 256
   ledge: {fileID: 8542569937667888346}
   animatorParameters:
-    attackPattern: Attack pattern
-    canClimb: Can climb
-    movementSpeed: Movement speed
+    attackPattern: AttackPattern
+    canClimb: CanClimb
+    isAlive: IsAlive
+    movementSpeed: MovementSpeed
   input:
     horizontal: Horizontal
     jump: Jump
