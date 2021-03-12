@@ -16,11 +16,11 @@ sealed class PlayerController : MonoBehaviour
         ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f;
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
     [SerializeField] private LayerMask whatIsGround, whatIsEnemy;
-    [SerializeField] private Transform ledge;
+    [SerializeField] private Transform ledge, floor;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
     [SerializeField] private PlayerInput input;
 
-    private bool isGrounded, isTouchingLedge, isTouchingWall, canAttack = true, isClimbed = false;
+    private bool isGrounded, isTouchingLedge, isTouchingFloor, canAttack = true, isClimbed = false;
     private float currentHealthPoints;
 
     private Animator animator = null;
@@ -62,6 +62,11 @@ sealed class PlayerController : MonoBehaviour
         currentHealthPoints = maxHealthPoints;
     }
 
+    private void FixedUpdate()
+    {
+        CheckEnvironment();
+    }
+
     private void Update()
     {
         if (currentHealthPoints <= 0.0f)
@@ -71,9 +76,6 @@ sealed class PlayerController : MonoBehaviour
 
             return;
         }
-
-        //CheckEnvironment method should be called first
-        CheckEnvironment();
 
         if (input.GetButtonDownAttack && canAttack)
         {
@@ -91,7 +93,7 @@ sealed class PlayerController : MonoBehaviour
     internal void ApplyDamage(float damage)
     {
         currentHealthPoints -= damage;
-        Debug.Log(currentHealthPoints);
+        Debug.Log($"Player's health points {currentHealthPoints}");
     }
 
     private void Attack()
@@ -106,15 +108,16 @@ sealed class PlayerController : MonoBehaviour
 
         isTouchingLedge = Raycast(ledge.position, spriteRenderer.flipX ? ledge.position + (-ledge.right) : ledge.position + ledge.right,
             ledgeCheckDistance, whatIsGround);
-        isTouchingWall = Raycast(transform.position, spriteRenderer.flipX ? -transform.right : transform.right,
+        isTouchingFloor = Raycast(floor.position, spriteRenderer.flipX ? -floor.right : floor.right,
             wallCheckDistance, whatIsGround);
     }
 
     private void Climb()
     {
-        if (!isTouchingLedge && isTouchingWall && !isClimbed && input.GetButtonDownJump)
+        if (!isTouchingLedge && isTouchingFloor && !isClimbed && input.GetButtonDownJump)
         {
             capsuleCollider2D.enabled = false;
+            rigidBody2D.velocity = Vector2.zero;
             rigidBody2D.gravityScale = 0;
 
             isClimbed = true;
@@ -153,7 +156,6 @@ sealed class PlayerController : MonoBehaviour
     /// Executable method in animation Climb as an event
     /// </summary>
     private void FinishClimb()
-#pragma warning restore IDE0051
     {
         isClimbed = false;
 
@@ -169,10 +171,10 @@ sealed class PlayerController : MonoBehaviour
     {
         Vector2 playerInput = new Vector2(input.GetAxisHorizontal * movementSpeed, 0.0f);
 
-        if (isGrounded)
+        if (!isClimbed && isGrounded)
         {
             rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
-            if (input.GetButtonDownJump && !isClimbed)
+            if (input.GetButtonDownJump)
             {
                 rigidBody2D.velocity = playerInput + (Vector2.up * jumpForce);
             }
@@ -187,7 +189,7 @@ sealed class PlayerController : MonoBehaviour
             spriteRenderer.flipX = false;
         }
 
-        animator.SetFloat(animatorParameters.movementSpeed, Abs(input.GetAxisHorizontal));
+        animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
     }
 
     /// <summary>

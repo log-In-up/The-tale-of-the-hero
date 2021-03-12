@@ -13,7 +13,8 @@ sealed class AIController : MonoBehaviour
     [SerializeField] private AIAnimatorParameters animatorParameters;
     [SerializeField]
     private float attackDistance = 0.6f, damage = 5.0f, groundCheckDistance = 0.5f, idleTime = 2.5f,
-        maxHealthPoints = 100.0f, movementSpeed = 1.0f,playerCheckDistance = 4.0f, wallCheckDistance = 0.25f;
+        maxHealthPoints = 100.0f, movementSpeed = 1.0f, playerCheckDistance = 4.0f, wallCheckDistance = 0.25f;
+    [SerializeField] private int attackPatterns = 2;
     [SerializeField] private Transform groundCheck = null;
     [SerializeField] private LayerMask whatIsGround, whatIsPlayer;
 
@@ -21,7 +22,7 @@ sealed class AIController : MonoBehaviour
     private AIState currentState = AIState.Idle;
     private AIState previousState;
 
-    private bool canAttack, isGrounded, isIdle, playerDetected, wallDetected;
+    private bool canAttack, canSee, isGrounded, isIdle, playerDetected, wallDetected;
     private float currentHealthPoints, randomAttackValue;
     private sbyte facingDirection;
 
@@ -49,7 +50,6 @@ sealed class AIController : MonoBehaviour
         isIdle = true;
 
         rigidBody2D.freezeRotation = true;
-        spriteRenderer.flipX = false;
 
         currentHealthPoints = maxHealthPoints;
         randomAttackValue = 1.0f;
@@ -105,13 +105,11 @@ sealed class AIController : MonoBehaviour
                 rigidBody2D.velocity = Vector2.zero;
                 animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
 
-                animator.SetBool(animatorParameters.isAttaking, canAttack);
                 animator.SetFloat(animatorParameters.attackValue, randomAttackValue);
             }
             else
             {
                 animator.SetFloat(animatorParameters.attackValue, 0.0f);
-                animator.SetBool(animatorParameters.isAttaking, canAttack);
                 Movement();
             }
         }
@@ -135,8 +133,8 @@ sealed class AIController : MonoBehaviour
 
         rigidBody2D.velocity = Vector2.zero;
         rigidBody2D.gravityScale = 0.0f;
+        spriteRenderer.sortingOrder -= 1;
 
-        animator.SetBool(animatorParameters.isAttaking, false);
         animator.SetBool(animatorParameters.isAlive, false);
     }
 
@@ -152,6 +150,7 @@ sealed class AIController : MonoBehaviour
         capsuleCollider.enabled = true;
 
         rigidBody2D.gravityScale = 1.0f;
+        spriteRenderer.sortingOrder += 1;
 
         animator.SetBool(animatorParameters.isAlive, true);
     }
@@ -170,7 +169,7 @@ sealed class AIController : MonoBehaviour
     }
 
     private void ExitHitState()
-    {        
+    {
         animator.SetBool(animatorParameters.isHit, false);
     }
     #endregion
@@ -191,6 +190,12 @@ sealed class AIController : MonoBehaviour
             StartCoroutine(ToggleStateByTime(idleTime, AIState.Walking));
             isIdle = false;
         }
+
+        if (Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer))
+        {
+            StopCoroutine(nameof(ToggleStateByTime));
+            SwitchState(AIState.Chaising);
+        }
     }
 
     private void ExitIdleState()
@@ -202,8 +207,10 @@ sealed class AIController : MonoBehaviour
     #region Walking state
     private void EnterWalkingState()
     {
+        canSee = false;
         isGrounded = false;
         wallDetected = false;
+        animator.SetFloat(animatorParameters.attackValue, 0.0f);
     }
 
     private void UpdateWalkingState()
@@ -220,7 +227,10 @@ sealed class AIController : MonoBehaviour
             Movement();
         }
 
-        if (Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer))
+        canSee = Linecast(transform.position, PlayerController.Instance.transform.position, whatIsGround);
+        playerDetected = Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer);
+
+        if (!canSee && playerDetected)
         {
             SwitchState(AIState.Chaising);
         }
@@ -228,6 +238,8 @@ sealed class AIController : MonoBehaviour
 
     private void ExitWalkingState()
     {
+        canSee = false;
+        playerDetected = false;
         animator.SetFloat(animatorParameters.movementSpeed, 0.0f);
     }
     #endregion
@@ -250,11 +262,9 @@ sealed class AIController : MonoBehaviour
     }
 
     /// <summary>
-    /// Executable method in animation Attack(A, B) as an event
+    /// Executable method in animations of Attack as an event
     /// </summary>
-#pragma warning disable IDE0051 
     private void DealDamage()
-#pragma warning restore IDE0051 
     {
         bool isHit = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
         RaycastHit2D hit = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
@@ -274,13 +284,12 @@ sealed class AIController : MonoBehaviour
     }
 
     /// <summary>
-    /// Executable method in animation Attack(A, B) as an event
+    /// Executable method in animations of Attack as an event
     /// </summary>
-#pragma warning disable IDE0051 
     private void NextAttack()
-#pragma warning restore IDE0051 
     {
-        randomAttackValue = Round(Random.Range(1.0f, 2.4f));
+        float maxValue = attackPatterns + 0.4f;
+        randomAttackValue = Round(Random.Range(1.0f, maxValue));
     }
 
     private void Rotation()
@@ -334,17 +343,15 @@ sealed class AIController : MonoBehaviour
     /// <summary>
     /// Executable method in animation Hit as an event
     /// </summary>
-#pragma warning disable IDE0051 
     private void TerminationOfHit() => SwitchState(previousState);
-#pragma warning restore IDE0051 
     #endregion
 
     #region Inner classes
     [System.Serializable]
     class AIAnimatorParameters
     {
-        [SerializeField] internal string attackValue = "AttackValue", isAlive = "IsAlive", isAttaking = "IsAttaking",
-            isHit = "IsHit", movementSpeed = "MovementSpeed";
+        [SerializeField]
+        internal string attackValue = "AttackValue", isAlive = "IsAlive", isHit = "IsHit", movementSpeed = "MovementSpeed";
     }
     #endregion
 }
