@@ -1,7 +1,7 @@
+using System.Collections;
 using UnityEngine;
 using static UnityEngine.Input;
 using static UnityEngine.Mathf;
-using static UnityEngine.Gizmos;
 using static UnityEngine.Physics2D;
 
 [RequireComponent(typeof(Animator))]
@@ -12,19 +12,22 @@ sealed class PlayerController : MonoBehaviour
 {
     #region Parameters
     [SerializeField]
-    private float attackDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f, jumpForce = 2.5f,
-        ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f;
+    private float attackDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f, hideWeaponTime = 5.0f,
+        jumpForce = 2.5f, ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f,
+        wallCheckDistance = 0.26f;
+    [SerializeField] private int attackPatterns = 4, hitPatterns = 2;
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
-    [SerializeField] private LayerMask whatIsGround, whatIsEnemy;
-    [SerializeField] private Transform ledge, floor;
+    [SerializeField] private LayerMask whatIsEnemy, whatIsGround;
+    [SerializeField] private Transform floorCheck, ledgeCheck;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
-    [SerializeField] private PlayerInput input;
+    [SerializeField] private PlayerInput inputAxes;
 
-    private bool isGrounded, isTouchingLedge, isTouchingFloor, canAttack = true, isClimbed = false;
-    private float currentHealthPoints;
+    private bool canAttack, isClimbed, isGrounded, isTouchingFloor, isTouchingLedge;
+    private float currentAttackPatterns, currentHealthPoints, currentHitPatterns;
 
     private Animator animator = null;
     private CapsuleCollider2D capsuleCollider2D = null;
+    private Coroutine currentCoroutine = null;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
     private Vector2 climbEnd;
@@ -55,11 +58,16 @@ sealed class PlayerController : MonoBehaviour
     private void Start()
     {
         canAttack = true;
+        isClimbed = false;
         rigidBody2D.freezeRotation = true;
         spriteRenderer.flipX = false;
+
         animator.SetBool(animatorParameters.isAlive, true);
+        animator.SetBool(animatorParameters.holdWeapon, false);
 
         currentHealthPoints = maxHealthPoints;
+        currentAttackPatterns = attackPatterns + 0.4f;
+        currentHitPatterns = hitPatterns + 0.4f;
     }
 
     private void FixedUpdate()
@@ -77,10 +85,17 @@ sealed class PlayerController : MonoBehaviour
             return;
         }
 
-        if (input.GetButtonDownAttack && canAttack)
+        if (inputAxes.GetButtonDownAttack && canAttack)
         {
             canAttack = false;
             Attack();
+            animator.SetBool(animatorParameters.holdWeapon, true);
+
+            if (currentCoroutine != null)
+            {
+                StopCoroutine(currentCoroutine);
+            }
+            currentCoroutine = StartCoroutine(HideWeapon(hideWeaponTime));
         }
 
         //Climb method must be called before the MovePlayer method
@@ -93,12 +108,20 @@ sealed class PlayerController : MonoBehaviour
     internal void ApplyDamage(float damage)
     {
         currentHealthPoints -= damage;
+        animator.SetFloat(animatorParameters.hitPattern, Round(Random.Range(1.0f, currentHitPatterns)));
         Debug.Log($"Player's health points {currentHealthPoints}");
+    }
+
+    private IEnumerator HideWeapon(float time)
+    {
+        yield return new WaitForSeconds(time);
+
+        animator.SetBool(animatorParameters.holdWeapon, false);
     }
 
     private void Attack()
     {
-        float attackPattern = Round(Random.Range(1.0f, 4.4f));
+        float attackPattern = Round(Random.Range(1.0f, currentAttackPatterns));
         animator.SetFloat(animatorParameters.attackPattern, attackPattern);
     }
 
@@ -106,15 +129,23 @@ sealed class PlayerController : MonoBehaviour
     {
         isGrounded = Raycast(transform.position, -transform.up, checkGroundDistance, whatIsGround);
 
-        isTouchingLedge = Raycast(ledge.position, spriteRenderer.flipX ? ledge.position + (-ledge.right) : ledge.position + ledge.right,
+        isTouchingLedge = Raycast(ledgeCheck.position, spriteRenderer.flipX ? ledgeCheck.position + (-ledgeCheck.right) : ledgeCheck.position + ledgeCheck.right,
             ledgeCheckDistance, whatIsGround);
-        isTouchingFloor = Raycast(floor.position, spriteRenderer.flipX ? -floor.right : floor.right,
+        isTouchingFloor = Raycast(floorCheck.position, spriteRenderer.flipX ? -floorCheck.right : floorCheck.right,
             wallCheckDistance, whatIsGround);
+    }
+
+    /// <summary>
+    /// Executable method in Hit animations as an event
+    /// </summary>
+    private void ChangeHitPattern()
+    {
+        animator.SetFloat(animatorParameters.hitPattern, 0.0f);
     }
 
     private void Climb()
     {
-        if (!isTouchingLedge && isTouchingFloor && !isClimbed && input.GetButtonDownJump)
+        if (!isTouchingLedge && isTouchingFloor && !isClimbed && inputAxes.GetButtonDownJump)
         {
             capsuleCollider2D.enabled = false;
             rigidBody2D.velocity = Vector2.zero;
@@ -140,7 +171,6 @@ sealed class PlayerController : MonoBehaviour
     /// <summary>
     /// Executable method in animation Attack(A-D) as an event
     /// </summary>
-#pragma warning disable IDE0051
     private void DealDamage()
     {
         bool isHit = Raycast(transform.position, spriteRenderer.flipX ? -transform.right : transform.right, attackDistance, whatIsEnemy);
@@ -169,12 +199,12 @@ sealed class PlayerController : MonoBehaviour
 
     private void MovePlayer()
     {
-        Vector2 playerInput = new Vector2(input.GetAxisHorizontal * movementSpeed, 0.0f);
+        Vector2 playerInput = new Vector2(inputAxes.GetAxisHorizontal * movementSpeed, 0.0f);
 
         if (!isClimbed && isGrounded)
         {
             rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
-            if (input.GetButtonDownJump)
+            if (inputAxes.GetButtonDownJump)
             {
                 rigidBody2D.velocity = playerInput + (Vector2.up * jumpForce);
             }
@@ -189,15 +219,14 @@ sealed class PlayerController : MonoBehaviour
             spriteRenderer.flipX = false;
         }
 
-        animator.SetFloat(animatorParameters.movementSpeed, Abs(rigidBody2D.velocity.x));
+        float currentVelocity = !animator.GetBool(animatorParameters.holdWeapon) ? rigidBody2D.velocity.x : rigidBody2D.velocity.x * 0.5f;
+        animator.SetFloat(animatorParameters.movementSpeed, Abs(currentVelocity));
     }
 
     /// <summary>
     /// Executable method in animation Attack(A-D) as an event
     /// </summary>
-#pragma warning disable IDE0051
     private void NextPattern()
-#pragma warning restore IDE0051
     {
         canAttack = true;
         animator.SetFloat(animatorParameters.attackPattern, 0.0f);
@@ -210,17 +239,19 @@ sealed class PlayerController : MonoBehaviour
     [System.Serializable]
     sealed class PlayerAnimatorParameters
     {
-        [SerializeField] internal string attackPattern = "AttackPattern", canClimb = "CanClimb", isAlive = "IsAlive", movementSpeed = "MovementSpeed";
+        [SerializeField]
+        internal string attackPattern = "AttackPattern", canClimb = "CanClimb", hitPattern = "HitPattern",
+            holdWeapon = "HoldWeapon", isAlive = "IsAlive", movementSpeed = "MovementSpeed";
     }
 
     [System.Serializable]
     sealed class PlayerInput
     {
-        [SerializeField] internal string horizontal = "Horizontal", jump = "Jump", attack = "Fire1";
+        [SerializeField] internal string horizontalAxis = "Horizontal", jump = "Jump", attack = "Fire1";
 
         internal bool GetButtonDownJump { get { return GetButtonDown(jump); } }
         internal bool GetButtonDownAttack { get { return GetButtonDown(attack); } }
-        internal float GetAxisHorizontal { get { return GetAxis(horizontal); } }
+        internal float GetAxisHorizontal { get { return GetAxis(horizontalAxis); } }
     }
     #endregion
 }

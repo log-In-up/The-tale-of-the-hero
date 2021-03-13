@@ -192,8 +192,11 @@ MonoBehaviour:
   jumpForce: 2.5
   ledgeCheckDistance: 0.36
   maxHealthPoints: 200
-  movementSpeed: 2.5
+  movementSpeed: 1.8
   wallCheckDistance: 0.26
+  hideWeaponTime: 5
+  attackPatterns: 4
+  hitPatterns: 2
   climbPoint: {x: 0.3, y: 0.7}
   whatIsGround:
     serializedVersion: 2
@@ -206,6 +209,8 @@ MonoBehaviour:
   animatorParameters:
     attackPattern: AttackPattern
     canClimb: CanClimb
+    hitPattern: HitPattern
+    holdWeapon: HoldWeapon
     isAlive: IsAlive
     movementSpeed: MovementSpeed
   input:
