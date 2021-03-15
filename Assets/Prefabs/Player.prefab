@@ -64,6 +64,7 @@ Transform:
   m_Children:
   - {fileID: 8542569937667888346}
   - {fileID: 6183999955192197541}
+  - {fileID: 8479501930905977942}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -187,34 +188,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackDistance: 0.5
-  checkGroundDistance: 0.4
+  checkGroundDistance: 0.8
   damage: 50
-  jumpForce: 2.5
+  hideWeaponTime: 5
   ledgeCheckDistance: 0.36
   maxHealthPoints: 200
   movementSpeed: 1.8
   wallCheckDistance: 0.26
-  hideWeaponTime: 5
+  jumpTime: 1.1
   attackPatterns: 4
   hitPatterns: 2
   climbPoint: {x: 0.3, y: 0.7}
-  whatIsGround:
-    serializedVersion: 2
-    m_Bits: 64
   whatIsEnemy:
     serializedVersion: 2
     m_Bits: 256
-  ledge: {fileID: 8542569937667888346}
-  floor: {fileID: 6183999955192197541}
+  whatIsGround:
+    serializedVersion: 2
+    m_Bits: 64
+  floorCheck: {fileID: 6183999955192197541}
+  ledgeCheck: {fileID: 8542569937667888346}
+  jumpPointCheck: {fileID: 8479501930905977942}
   animatorParameters:
     attackPattern: AttackPattern
     canClimb: CanClimb
     hitPattern: HitPattern
     holdWeapon: HoldWeapon
     isAlive: IsAlive
+    isJumping: IsJumping
     movementSpeed: MovementSpeed
-  input:
-    horizontal: Horizontal
+  inputAxes:
+    horizontalAxis: Horizontal
     jump: Jump
     attack: Fire1
 --- !u!1 &5603425915424777964
@@ -226,7 +229,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6183999955192197541}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: FloorCheck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -246,4 +249,34 @@ Transform:
   m_Children: []
   m_Father: {fileID: 4475492954551982901}
   m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &8459961788549161197
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8479501930905977942}
+  m_Layer: 0
+  m_Name: JumpPointCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8479501930905977942
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8459961788549161197}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.05, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 4475492954551982901}
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

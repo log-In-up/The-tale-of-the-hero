@@ -13,24 +13,24 @@ sealed class PlayerController : MonoBehaviour
     #region Parameters
     [SerializeField]
     private float attackDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f, hideWeaponTime = 5.0f,
-        jumpForce = 2.5f, ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f,
-        wallCheckDistance = 0.26f;
+        ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f,
+        jumpTime = 1.1f;
     [SerializeField] private int attackPatterns = 4, hitPatterns = 2;
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
     [SerializeField] private LayerMask whatIsEnemy, whatIsGround;
-    [SerializeField] private Transform floorCheck, ledgeCheck;
+    [SerializeField] private Transform floorCheck, ledgeCheck, jumpPointCheck;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
     [SerializeField] private PlayerInput inputAxes;
 
-    private bool canAttack, isClimbed, isGrounded, isTouchingFloor, isTouchingLedge;
-    private float currentAttackPatterns, currentHealthPoints, currentHitPatterns;
+    private bool canAttack, isClimbed, isGrounded, preJump, canJump, isJumping, isTouchingFloor, isTouchingLedge, lookToRight;
+    private float currentAttackPatterns, currentHealthPoints, currentHitPatterns, percentage, timeStartLerp;
 
     private Animator animator = null;
     private CapsuleCollider2D capsuleCollider2D = null;
     private Coroutine currentCoroutine = null;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
-    private Vector2 climbEnd;
+    private Vector2 climbEnd, jumpStart, jumpEnd;
 
     public static PlayerController Instance { get; private set; }
     #endregion
@@ -57,14 +57,15 @@ sealed class PlayerController : MonoBehaviour
 
     private void Start()
     {
-        canAttack = true;
-        isClimbed = false;
+        canAttack = preJump = lookToRight = true;
+        isClimbed = isJumping = false;
+
         rigidBody2D.freezeRotation = true;
-        spriteRenderer.flipX = false;
 
         animator.SetBool(animatorParameters.isAlive, true);
         animator.SetBool(animatorParameters.holdWeapon, false);
 
+        percentage = 0.0f;
         currentHealthPoints = maxHealthPoints;
         currentAttackPatterns = attackPatterns + 0.4f;
         currentHitPatterns = hitPatterns + 0.4f;
@@ -83,6 +84,11 @@ sealed class PlayerController : MonoBehaviour
             rigidBody2D.velocity = Vector2.zero;
 
             return;
+        }
+
+        if (isJumping && percentage <= 1.0f)
+        {
+            Jump();
         }
 
         if (inputAxes.GetButtonDownAttack && canAttack)
@@ -129,10 +135,10 @@ sealed class PlayerController : MonoBehaviour
     {
         isGrounded = Raycast(transform.position, -transform.up, checkGroundDistance, whatIsGround);
 
-        isTouchingLedge = Raycast(ledgeCheck.position, spriteRenderer.flipX ? ledgeCheck.position + (-ledgeCheck.right) : ledgeCheck.position + ledgeCheck.right,
-            ledgeCheckDistance, whatIsGround);
-        isTouchingFloor = Raycast(floorCheck.position, spriteRenderer.flipX ? -floorCheck.right : floorCheck.right,
-            wallCheckDistance, whatIsGround);
+        isTouchingLedge = Raycast(ledgeCheck.position, ledgeCheck.position + ledgeCheck.right, ledgeCheckDistance, whatIsGround);
+        isTouchingFloor = Raycast(floorCheck.position, floorCheck.right, wallCheckDistance, whatIsGround);
+
+        canJump = Raycast(jumpPointCheck.position, -jumpPointCheck.up, checkGroundDistance, whatIsGround);
     }
 
     /// <summary>
@@ -147,20 +153,11 @@ sealed class PlayerController : MonoBehaviour
     {
         if (!isTouchingLedge && isTouchingFloor && !isClimbed && inputAxes.GetButtonDownJump)
         {
-            capsuleCollider2D.enabled = false;
-            rigidBody2D.velocity = Vector2.zero;
-            rigidBody2D.gravityScale = 0;
+            DisableComponents();
 
             isClimbed = true;
-            if (spriteRenderer.flipX)
-            {
-                climbEnd.x = transform.position.x - climbPoint.x;
-                climbEnd.y = transform.position.y + climbPoint.y;
-            }
-            else
-            {
-                climbEnd = transform.position + (Vector3)climbPoint;
-            }
+
+            climbEnd = transform.position + (Vector3)climbPoint;
         }
         if (isClimbed)
         {
@@ -173,8 +170,8 @@ sealed class PlayerController : MonoBehaviour
     /// </summary>
     private void DealDamage()
     {
-        bool isHit = Raycast(transform.position, spriteRenderer.flipX ? -transform.right : transform.right, attackDistance, whatIsEnemy);
-        RaycastHit2D hit = Raycast(transform.position, spriteRenderer.flipX ? -transform.right : transform.right, attackDistance, whatIsEnemy);
+        bool isHit = Raycast(transform.position, transform.right, attackDistance, whatIsEnemy);
+        RaycastHit2D hit = Raycast(transform.position, transform.right, attackDistance, whatIsEnemy);
 
         if (isHit && hit.collider.gameObject.GetComponent<AIController>() != null)
         {
@@ -191,8 +188,7 @@ sealed class PlayerController : MonoBehaviour
 
         transform.position = climbEnd;
 
-        capsuleCollider2D.enabled = true;
-        rigidBody2D.gravityScale = 1;
+        EnableComponents();
 
         animator.SetBool(animatorParameters.canClimb, isClimbed);
     }
@@ -204,23 +200,81 @@ sealed class PlayerController : MonoBehaviour
         if (!isClimbed && isGrounded)
         {
             rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
-            if (inputAxes.GetButtonDownJump)
+            if (inputAxes.GetButtonDownJump && canJump)
             {
-                rigidBody2D.velocity = playerInput + (Vector2.up * jumpForce);
+                timeStartLerp = Time.time;
+                isJumping = true;
             }
         }
 
         if (rigidBody2D.velocity.x < -0.01f)
         {
-            spriteRenderer.flipX = true;
+            transform.rotation = Quaternion.Euler(0.0f, 180.0f, 0.0f);
+            lookToRight = false;
         }
         else if (rigidBody2D.velocity.x > 0.01f)
         {
-            spriteRenderer.flipX = false;
+            transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+            lookToRight = true;
         }
 
         float currentVelocity = !animator.GetBool(animatorParameters.holdWeapon) ? rigidBody2D.velocity.x : rigidBody2D.velocity.x * 0.5f;
         animator.SetFloat(animatorParameters.movementSpeed, Abs(currentVelocity));
+    }
+
+    private void Jump()
+    {
+        if (preJump)
+        {
+            animator.SetBool(animatorParameters.isJumping, isJumping);
+
+            DisableComponents();
+
+            jumpStart = transform.position;
+
+            if (lookToRight)
+            {
+                jumpEnd = transform.position + jumpPointCheck.localPosition;
+            }
+            else
+            {
+                jumpEnd.x = transform.position.x - jumpPointCheck.localPosition.x;
+                jumpEnd.y = transform.position.y + jumpPointCheck.localPosition.y;
+            }
+
+            preJump = false;
+        }
+
+        percentage = (Time.time - timeStartLerp) / jumpTime;
+
+        transform.position = Vector3.Lerp(jumpStart, jumpEnd, percentage);
+    }
+
+    private void DisableComponents()
+    {
+        capsuleCollider2D.enabled = false;
+        rigidBody2D.velocity = Vector2.zero;
+        rigidBody2D.gravityScale = 0;
+    }
+
+    private void EnableComponents()
+    {
+        capsuleCollider2D.enabled = true;
+        rigidBody2D.gravityScale = 1;
+    }
+
+    /// <summary>
+    /// Executable method in animation Jump as an event
+    /// </summary>
+    private void JumpEnd()
+    {
+        isJumping = false;
+        preJump = true;
+        percentage = 0.0f;
+
+        animator.SetBool(animatorParameters.isJumping, isJumping);
+
+        EnableComponents();
     }
 
     /// <summary>
@@ -241,7 +295,7 @@ sealed class PlayerController : MonoBehaviour
     {
         [SerializeField]
         internal string attackPattern = "AttackPattern", canClimb = "CanClimb", hitPattern = "HitPattern",
-            holdWeapon = "HoldWeapon", isAlive = "IsAlive", movementSpeed = "MovementSpeed";
+            holdWeapon = "HoldWeapon", isAlive = "IsAlive", isJumping = "IsJumping", movementSpeed = "MovementSpeed";
     }
 
     [System.Serializable]
