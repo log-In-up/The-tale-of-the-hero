@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3500291250901049262}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: GroundCheck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -29,6 +29,36 @@ Transform:
   m_Children: []
   m_Father: {fileID: 3390495203849559111}
   m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1934158209750116003
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 110167349055537892}
+  m_Layer: 0
+  m_Name: JumpPointCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &110167349055537892
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1934158209750116003}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.0500002, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 3390495203849559111}
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4679440663056398883
 GameObject:
@@ -63,6 +93,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 3500291250901049262}
+  - {fileID: 110167349055537892}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -82,7 +113,9 @@ MonoBehaviour:
     attackValue: AttackValue
     isAlive: IsAlive
     isHit: IsHit
+    isJumping: IsJumping
     movementSpeed: MovementSpeed
+  jump: 0
   attackDistance: 0.6
   damage: 5
   groundCheckDistance: 0.5
@@ -91,8 +124,10 @@ MonoBehaviour:
   movementSpeed: 1
   playerCheckDistance: 4
   wallCheckDistance: 0.3
+  jumpTime: 0.6
   attackPatterns: 3
   groundCheck: {fileID: 3500291250901049262}
+  jumpPointCheck: {fileID: 110167349055537892}
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64

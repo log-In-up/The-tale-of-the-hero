@@ -33,6 +33,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 3860824241280616502}
+  - {fileID: 907898728998508076}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -51,9 +52,10 @@ MonoBehaviour:
   animatorParameters:
     attackValue: AttackValue
     isAlive: IsAlive
-    isAttaking: IsAttaking
     isHit: IsHit
     movementSpeed: MovementSpeed
+    isJumping: IsJumping
+  jump: 1
   attackDistance: 0.4
   damage: 5
   groundCheckDistance: 0.3
@@ -62,7 +64,10 @@ MonoBehaviour:
   movementSpeed: 1
   playerCheckDistance: 4
   wallCheckDistance: 0.3
+  jumpTime: 0.85
+  attackPatterns: 2
   groundCheck: {fileID: 3860824241280616502}
+  jumpPointCheck: {fileID: 907898728998508076}
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
@@ -176,6 +181,36 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1 &5550977901732469495
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 907898728998508076}
+  m_Layer: 0
+  m_Name: JumpPointCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &907898728998508076
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5550977901732469495}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.05, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 3369061295830752632}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8907922736092141034
 GameObject:
   m_ObjectHideFlags: 0

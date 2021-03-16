@@ -11,33 +11,35 @@ sealed class AIController : MonoBehaviour
 {
     #region Parameters
     [SerializeField] private AIAnimatorParameters animatorParameters;
+    [SerializeField] private bool jump = true;
     [SerializeField]
     private float attackDistance = 0.6f, damage = 5.0f, groundCheckDistance = 0.5f, idleTime = 2.5f,
-        maxHealthPoints = 100.0f, movementSpeed = 1.0f, playerCheckDistance = 4.0f, wallCheckDistance = 0.25f;
+        maxHealthPoints = 100.0f, movementSpeed = 1.0f, playerCheckDistance = 4.0f, wallCheckDistance = 0.25f,
+        jumpTime = 0.6f;
     [SerializeField] private int attackPatterns = 2;
-    [SerializeField] private Transform groundCheck = null;
+    [SerializeField] private Transform groundCheck = null, jumpPointCheck = null;
     [SerializeField] private LayerMask whatIsGround, whatIsPlayer;
 
-    private enum AIState { Chaising, Dead, Hit, Idle, Walking }
+    private enum AIState { Chaising, Dead, Hit, Idle, Jump, Walking }
     private AIState currentState = AIState.Idle;
     private AIState previousState;
 
-    private bool canAttack, canSee, isGrounded, isIdle, playerDetected, wallDetected;
-    private float currentHealthPoints, randomAttackValue;
+    private bool canAttack, canSee,canJump, isGrounded, isIdle, playerDetected, wallDetected, lookToRight;
+    private float currentHealthPoints, randomAttackValue, percentage, timeStartLerp;
     private sbyte facingDirection;
 
     private Animator animator = null;
-    private CapsuleCollider2D capsuleCollider = null;
+    private CapsuleCollider2D capsuleCollider2D = null;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
-    private Vector2 movement;
+    private Vector2 movement, jumpStart, jumpEnd;
     #endregion
 
     #region MonoBehaviour API
     private void Awake()
     {
         animator = GetComponent<Animator>();
-        capsuleCollider = GetComponent<CapsuleCollider2D>();
+        capsuleCollider2D = GetComponent<CapsuleCollider2D>();
         rigidBody2D = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
     }
@@ -45,13 +47,13 @@ sealed class AIController : MonoBehaviour
     private void Start()
     {
         animator.SetBool(animatorParameters.isAlive, true);
-
-        currentState = AIState.Idle;
-        isIdle = true;
-
         rigidBody2D.freezeRotation = true;
 
+        currentState = AIState.Idle;
+        lookToRight = isIdle = true;
+
         currentHealthPoints = maxHealthPoints;
+        timeStartLerp = percentage = 0.0f;
         randomAttackValue = 1.0f;
         facingDirection = 1;
     }
@@ -77,6 +79,9 @@ sealed class AIController : MonoBehaviour
             case AIState.Idle:
                 UpdateIdleState();
                 break;
+            case AIState.Jump:
+                UpdateJumpState();
+                break;
             case AIState.Walking:
                 UpdateWalkingState();
                 break;
@@ -88,14 +93,15 @@ sealed class AIController : MonoBehaviour
     #region Chaising state
     private void EnterChaisingState()
     {
-        playerDetected = false;
-        canAttack = false;
+        playerDetected = canAttack = false;
     }
 
     private void UpdateChaisingState()
     {
         playerDetected = Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer);
         canAttack = Raycast(transform.position, transform.right, attackDistance, whatIsPlayer);
+        isGrounded = Raycast(groundCheck.position, Vector2.down, groundCheckDistance, whatIsGround);
+        canJump = Raycast(jumpPointCheck.position, -jumpPointCheck.up, groundCheckDistance, whatIsGround);
 
         if (playerDetected)
         {
@@ -110,29 +116,40 @@ sealed class AIController : MonoBehaviour
             else
             {
                 animator.SetFloat(animatorParameters.attackValue, 0.0f);
-                Movement();
+                if (jump && !isGrounded && canJump)
+                {
+                    previousState = currentState;
+                    SwitchState(AIState.Jump);
+                }
+                else if(!jump && !isGrounded)
+                {
+                    Rotation();
+                    SwitchState(AIState.Idle);
+                }
+                else
+                {
+                    Movement();
+                }
             }
         }
         else
         {
+            Rotation();
             SwitchState(AIState.Idle);
         }
     }
 
     private void ExitChaisingState()
     {
-        playerDetected = false;
-        canAttack = false;
+        playerDetected = canAttack = false;
     }
     #endregion
 
     #region Dead state
     private void EnterDeadState()
     {
-        capsuleCollider.enabled = false;
+        DisableComponents();
 
-        rigidBody2D.velocity = Vector2.zero;
-        rigidBody2D.gravityScale = 0.0f;
         spriteRenderer.sortingOrder -= 1;
 
         animator.SetBool(animatorParameters.isAlive, false);
@@ -147,9 +164,8 @@ sealed class AIController : MonoBehaviour
     {
         currentHealthPoints = maxHealthPoints;
 
-        capsuleCollider.enabled = true;
+        EnableComponents();
 
-        rigidBody2D.gravityScale = 1.0f;
         spriteRenderer.sortingOrder += 1;
 
         animator.SetBool(animatorParameters.isAlive, true);
@@ -204,12 +220,54 @@ sealed class AIController : MonoBehaviour
     }
     #endregion
 
+    #region Jump state
+    private void EnterJumpState()
+    {
+        animator.SetBool(animatorParameters.isJumping, true);
+        DisableComponents();
+
+        timeStartLerp = Time.time;
+        jumpStart = transform.position;
+
+        if (lookToRight)
+        {
+            jumpEnd = transform.position + jumpPointCheck.localPosition;
+        }
+        else
+        {
+            jumpEnd.x = transform.position.x - jumpPointCheck.localPosition.x;
+            jumpEnd.y = transform.position.y + jumpPointCheck.localPosition.y;
+        }
+    }
+
+
+    private void UpdateJumpState()
+    {
+        if (percentage <= 1.0f)
+        {
+            percentage = (Time.time - timeStartLerp) / jumpTime;
+
+            transform.position = Vector3.Lerp(jumpStart, jumpEnd, percentage);
+        }
+        else 
+        {
+            SwitchState(previousState);
+        }
+    }
+
+    private void ExitJumpState()
+    {
+        EnableComponents();
+
+        animator.SetBool(animatorParameters.isJumping, false);
+        percentage = 0.0f;
+    }
+    #endregion
+
     #region Walking state
     private void EnterWalkingState()
     {
-        canSee = false;
-        isGrounded = false;
-        wallDetected = false;
+        canSee = isGrounded = wallDetected = false;
         animator.SetFloat(animatorParameters.attackValue, 0.0f);
     }
 
@@ -230,7 +288,7 @@ sealed class AIController : MonoBehaviour
         canSee = Linecast(transform.position, PlayerController.Instance.transform.position, whatIsGround);
         playerDetected = Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer);
 
-        if (!canSee && playerDetected)
+        if (!canSee && playerDetected && isGrounded)
         {
             SwitchState(AIState.Chaising);
         }
@@ -238,8 +296,7 @@ sealed class AIController : MonoBehaviour
 
     private void ExitWalkingState()
     {
-        canSee = false;
-        playerDetected = false;
+        canSee = playerDetected = false;
         animator.SetFloat(animatorParameters.movementSpeed, 0.0f);
     }
     #endregion
@@ -296,6 +353,21 @@ sealed class AIController : MonoBehaviour
     {
         facingDirection *= -1;
         transform.Rotate(0.0f, 180.0f, 0.0f);
+
+        lookToRight = !lookToRight;
+    }
+
+    private void DisableComponents()
+    {
+        capsuleCollider2D.enabled = false;
+        rigidBody2D.velocity = Vector2.zero;
+        rigidBody2D.gravityScale = 0.0f;
+    }
+
+    private void EnableComponents()
+    {
+        capsuleCollider2D.enabled = true;
+        rigidBody2D.gravityScale = 1.0f;
     }
 
     private void SwitchState(AIState state)
@@ -313,6 +385,9 @@ sealed class AIController : MonoBehaviour
                 break;
             case AIState.Idle:
                 ExitIdleState();
+                break;
+            case AIState.Jump:
+                ExitJumpState();
                 break;
             case AIState.Walking:
                 ExitWalkingState();
@@ -333,6 +408,9 @@ sealed class AIController : MonoBehaviour
             case AIState.Idle:
                 EnterIdleState();
                 break;
+            case AIState.Jump:
+                EnterJumpState();
+                break;
             case AIState.Walking:
                 EnterWalkingState();
                 break;
@@ -341,9 +419,9 @@ sealed class AIController : MonoBehaviour
     }
 
     /// <summary>
-    /// Executable method in animation Hit as an event
+    /// Executable method in animation Hit and Jump as an event
     /// </summary>
-    private void TerminationOfHit() => SwitchState(previousState);
+    private void TerminationOfAction() => SwitchState(previousState);
     #endregion
 
     #region Inner classes
@@ -351,7 +429,8 @@ sealed class AIController : MonoBehaviour
     class AIAnimatorParameters
     {
         [SerializeField]
-        internal string attackValue = "AttackValue", isAlive = "IsAlive", isHit = "IsHit", movementSpeed = "MovementSpeed";
+        internal string attackValue = "AttackValue", isAlive = "IsAlive", isHit = "IsHit", isJumping = "IsJumping",
+            movementSpeed = "MovementSpeed";
     }
     #endregion
 }

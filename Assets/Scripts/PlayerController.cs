@@ -18,7 +18,7 @@ sealed class PlayerController : MonoBehaviour
     [SerializeField] private int attackPatterns = 4, hitPatterns = 2;
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
     [SerializeField] private LayerMask whatIsEnemy, whatIsGround;
-    [SerializeField] private Transform floorCheck, ledgeCheck, jumpPointCheck;
+    [SerializeField] private Transform floorCheck = null, ledgeCheck = null, jumpPointCheck = null;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
     [SerializeField] private PlayerInput inputAxes;
 
@@ -57,8 +57,8 @@ sealed class PlayerController : MonoBehaviour
 
     private void Start()
     {
-        canAttack = preJump = lookToRight = true;
-        isClimbed = isJumping = false;
+        canAttack = lookToRight = true;
+        isClimbed = preJump = isJumping = false;
 
         rigidBody2D.freezeRotation = true;
 
@@ -224,7 +224,7 @@ sealed class PlayerController : MonoBehaviour
 
     private void Jump()
     {
-        if (preJump)
+        if (!preJump)
         {
             animator.SetBool(animatorParameters.isJumping, isJumping);
 
@@ -242,7 +242,7 @@ sealed class PlayerController : MonoBehaviour
                 jumpEnd.y = transform.position.y + jumpPointCheck.localPosition.y;
             }
 
-            preJump = false;
+            preJump = true;
         }
 
         percentage = (Time.time - timeStartLerp) / jumpTime;
@@ -254,13 +254,13 @@ sealed class PlayerController : MonoBehaviour
     {
         capsuleCollider2D.enabled = false;
         rigidBody2D.velocity = Vector2.zero;
-        rigidBody2D.gravityScale = 0;
+        rigidBody2D.gravityScale = 0.0f;
     }
 
     private void EnableComponents()
     {
         capsuleCollider2D.enabled = true;
-        rigidBody2D.gravityScale = 1;
+        rigidBody2D.gravityScale = 1.0f;
     }
 
     /// <summary>
@@ -268,8 +268,7 @@ sealed class PlayerController : MonoBehaviour
     /// </summary>
     private void JumpEnd()
     {
-        isJumping = false;
-        preJump = true;
+        isJumping = preJump = false;
         percentage = 0.0f;
 
         animator.SetBool(animatorParameters.isJumping, isJumping);

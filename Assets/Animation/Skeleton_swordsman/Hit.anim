@@ -73,7 +73,7 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0.33333334
-    functionName: TerminationOfHit
+    functionName: TerminationOfAction
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
