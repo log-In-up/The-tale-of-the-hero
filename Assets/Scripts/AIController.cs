@@ -10,29 +10,29 @@ using static UnityEngine.Physics2D;
 sealed class AIController : MonoBehaviour
 {
     #region Parameters
-    [SerializeField] private AIAnimatorParameters animatorParameters;
     [SerializeField] private bool jump = true;
     [SerializeField]
-    private float attackDistance = 0.6f, damage = 5.0f, groundCheckDistance = 0.5f, idleTime = 2.5f,
-        maxHealthPoints = 100.0f, movementSpeed = 1.0f, playerCheckDistance = 4.0f, wallCheckDistance = 0.25f,
-        jumpTime = 0.6f;
+    private float attackDistance = 0.6f, damage = 5.0f, groundCheckDistance = 0.5f, idleTime = 2.5f, jumpTime = 0.6f,
+        maxHealthPoints = 100.0f, maxRandomTimeToIdle = 6.0f, minRandomTimeToIdle = 2.0f, movementSpeed = 1.0f,
+        playerCheckDistance = 4.0f, wallCheckDistance = 0.25f;
     [SerializeField] private int attackPatterns = 2;
-    [SerializeField] private Transform groundCheck = null, jumpPointCheck = null;
+    [SerializeField] private AIAnimatorParameters animatorParameters;
     [SerializeField] private LayerMask whatIsGround, whatIsPlayer;
+    [SerializeField] private Transform groundCheck = null, jumpPointCheck = null;
 
     private enum AIState { Chaising, Dead, Hit, Idle, Jump, Walking }
     private AIState currentState = AIState.Idle;
     private AIState previousState;
 
-    private bool canAttack, canSee,canJump, isGrounded, isIdle, playerDetected, wallDetected, lookToRight;
-    private float currentHealthPoints, randomAttackValue, percentage, timeStartLerp;
+    private bool canAttack, canJump, isGrounded, isIdle, lookToRight, playerDetected, wallDetected;
+    private float currentHealthPoints, lerpPercentage, randomAttackValue, randomTimeToIdle, switchTime, timeStartLerp;
     private sbyte facingDirection;
 
     private Animator animator = null;
     private CapsuleCollider2D capsuleCollider2D = null;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
-    private Vector2 movement, jumpStart, jumpEnd;
+    private Vector2 jumpEnd, jumpStart, movement;
     #endregion
 
     #region MonoBehaviour API
@@ -53,7 +53,7 @@ sealed class AIController : MonoBehaviour
         lookToRight = isIdle = true;
 
         currentHealthPoints = maxHealthPoints;
-        timeStartLerp = percentage = 0.0f;
+        timeStartLerp = lerpPercentage = 0.0f;
         randomAttackValue = 1.0f;
         facingDirection = 1;
     }
@@ -121,7 +121,7 @@ sealed class AIController : MonoBehaviour
                     previousState = currentState;
                     SwitchState(AIState.Jump);
                 }
-                else if(!jump && !isGrounded)
+                else if (!jump && !isGrounded)
                 {
                     Rotation();
                     SwitchState(AIState.Idle);
@@ -187,6 +187,13 @@ sealed class AIController : MonoBehaviour
     private void ExitHitState()
     {
         animator.SetBool(animatorParameters.isHit, false);
+
+        playerDetected = Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer);
+        if (!playerDetected)
+        {
+            Rotation();
+            SwitchState(AIState.Chaising);
+        }
     }
     #endregion
 
@@ -240,16 +247,15 @@ sealed class AIController : MonoBehaviour
         }
     }
 
-
     private void UpdateJumpState()
     {
-        if (percentage <= 1.0f)
+        if (lerpPercentage <= 1.0f)
         {
-            percentage = (Time.time - timeStartLerp) / jumpTime;
+            lerpPercentage = (Time.time - timeStartLerp) / jumpTime;
 
-            transform.position = Vector3.Lerp(jumpStart, jumpEnd, percentage);
+            transform.position = Vector3.Lerp(jumpStart, jumpEnd, lerpPercentage);
         }
-        else 
+        else
         {
             SwitchState(previousState);
         }
@@ -260,14 +266,15 @@ sealed class AIController : MonoBehaviour
         EnableComponents();
 
         animator.SetBool(animatorParameters.isJumping, false);
-        percentage = 0.0f;
+        lerpPercentage = 0.0f;
     }
     #endregion
 
     #region Walking state
     private void EnterWalkingState()
     {
-        canSee = isGrounded = wallDetected = false;
+        randomTimeToIdle = Random.Range(minRandomTimeToIdle, maxRandomTimeToIdle);
+        isGrounded = wallDetected = false;
         animator.SetFloat(animatorParameters.attackValue, 0.0f);
     }
 
@@ -285,10 +292,16 @@ sealed class AIController : MonoBehaviour
             Movement();
         }
 
-        canSee = Linecast(transform.position, PlayerController.Instance.transform.position, whatIsGround);
+        if(Time.time > switchTime)
+        {
+            switchTime = Time.time + randomTimeToIdle;
+            Rotation();
+            SwitchState(AIState.Idle);
+        }
+
         playerDetected = Raycast(transform.position, transform.right, playerCheckDistance, whatIsPlayer);
 
-        if (!canSee && playerDetected && isGrounded)
+        if (playerDetected && isGrounded)
         {
             SwitchState(AIState.Chaising);
         }
@@ -296,7 +309,7 @@ sealed class AIController : MonoBehaviour
 
     private void ExitWalkingState()
     {
-        canSee = playerDetected = false;
+        playerDetected = false;
         animator.SetFloat(animatorParameters.movementSpeed, 0.0f);
     }
     #endregion
@@ -306,8 +319,8 @@ sealed class AIController : MonoBehaviour
     internal void ApplyDamage(float damage)
     {
         currentHealthPoints -= damage;
-
         previousState = currentState;
+
         SwitchState(AIState.Hit);
     }
 
@@ -328,8 +341,21 @@ sealed class AIController : MonoBehaviour
 
         if (isHit && hit.collider.gameObject.GetComponent<PlayerController>() != null)
         {
-            hit.collider.gameObject.GetComponent<PlayerController>().ApplyDamage(damage);
+            PlayerController.Instance.ApplyDamage(damage);
         }
+    }
+
+    private void DisableComponents()
+    {
+        capsuleCollider2D.enabled = false;
+        rigidBody2D.velocity = Vector2.zero;
+        rigidBody2D.gravityScale = 0.0f;
+    }
+
+    private void EnableComponents()
+    {
+        capsuleCollider2D.enabled = true;
+        rigidBody2D.gravityScale = 1.0f;
     }
 
     private void Movement()
@@ -355,19 +381,6 @@ sealed class AIController : MonoBehaviour
         transform.Rotate(0.0f, 180.0f, 0.0f);
 
         lookToRight = !lookToRight;
-    }
-
-    private void DisableComponents()
-    {
-        capsuleCollider2D.enabled = false;
-        rigidBody2D.velocity = Vector2.zero;
-        rigidBody2D.gravityScale = 0.0f;
-    }
-
-    private void EnableComponents()
-    {
-        capsuleCollider2D.enabled = true;
-        rigidBody2D.gravityScale = 1.0f;
     }
 
     private void SwitchState(AIState state)

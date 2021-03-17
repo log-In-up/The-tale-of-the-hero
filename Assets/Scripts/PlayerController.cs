@@ -12,15 +12,14 @@ sealed class PlayerController : MonoBehaviour
 {
     #region Parameters
     [SerializeField]
-    private float attackDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f, hideWeaponTime = 5.0f,
-        ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f,
-        jumpTime = 1.1f;
+    private float attackDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f, hideWeaponTime = 5.0f, jumpTime = 1.1f,
+        ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f;
     [SerializeField] private int attackPatterns = 4, hitPatterns = 2;
-    [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
     [SerializeField] private LayerMask whatIsEnemy, whatIsGround;
-    [SerializeField] private Transform floorCheck = null, ledgeCheck = null, jumpPointCheck = null;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
     [SerializeField] private PlayerInput inputAxes;
+    [SerializeField] private Transform floorCheck = null, ledgeCheck = null, jumpPointCheck = null;
+    [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
 
     private bool canAttack, isClimbed, isGrounded, preJump, canJump, isJumping, isTouchingFloor, isTouchingLedge, lookToRight;
     private float currentAttackPatterns, currentHealthPoints, currentHitPatterns, percentage, timeStartLerp;
@@ -111,6 +110,7 @@ sealed class PlayerController : MonoBehaviour
     #endregion
 
     #region Custom methods
+#pragma warning disable IDE0051
     internal void ApplyDamage(float damage)
     {
         currentHealthPoints -= damage;
@@ -168,6 +168,7 @@ sealed class PlayerController : MonoBehaviour
     /// <summary>
     /// Executable method in animation Attack(A-D) as an event
     /// </summary>
+
     private void DealDamage()
     {
         bool isHit = Raycast(transform.position, transform.right, attackDistance, whatIsEnemy);
@@ -177,6 +178,19 @@ sealed class PlayerController : MonoBehaviour
         {
             hit.collider.gameObject.GetComponent<AIController>().ApplyDamage(damage);
         }
+    }
+
+    private void DisableComponents()
+    {
+        capsuleCollider2D.enabled = false;
+        rigidBody2D.velocity = Vector2.zero;
+        rigidBody2D.gravityScale = 0.0f;
+    }
+
+    private void EnableComponents()
+    {
+        capsuleCollider2D.enabled = true;
+        rigidBody2D.gravityScale = 1.0f;
     }
 
     /// <summary>
@@ -191,35 +205,6 @@ sealed class PlayerController : MonoBehaviour
         EnableComponents();
 
         animator.SetBool(animatorParameters.canClimb, isClimbed);
-    }
-
-    private void MovePlayer()
-    {
-        Vector2 playerInput = new Vector2(inputAxes.GetAxisHorizontal * movementSpeed, 0.0f);
-
-        if (!isClimbed && isGrounded)
-        {
-            rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
-            if (inputAxes.GetButtonDownJump && canJump)
-            {
-                timeStartLerp = Time.time;
-                isJumping = true;
-            }
-        }
-
-        if (rigidBody2D.velocity.x < -0.01f)
-        {
-            transform.rotation = Quaternion.Euler(0.0f, 180.0f, 0.0f);
-            lookToRight = false;
-        }
-        else if (rigidBody2D.velocity.x > 0.01f)
-        {
-            transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
-            lookToRight = true;
-        }
-
-        float currentVelocity = !animator.GetBool(animatorParameters.holdWeapon) ? rigidBody2D.velocity.x : rigidBody2D.velocity.x * 0.5f;
-        animator.SetFloat(animatorParameters.movementSpeed, Abs(currentVelocity));
     }
 
     private void Jump()
@@ -250,19 +235,6 @@ sealed class PlayerController : MonoBehaviour
         transform.position = Vector3.Lerp(jumpStart, jumpEnd, percentage);
     }
 
-    private void DisableComponents()
-    {
-        capsuleCollider2D.enabled = false;
-        rigidBody2D.velocity = Vector2.zero;
-        rigidBody2D.gravityScale = 0.0f;
-    }
-
-    private void EnableComponents()
-    {
-        capsuleCollider2D.enabled = true;
-        rigidBody2D.gravityScale = 1.0f;
-    }
-
     /// <summary>
     /// Executable method in animation Jump as an event
     /// </summary>
@@ -276,6 +248,35 @@ sealed class PlayerController : MonoBehaviour
         EnableComponents();
     }
 
+    private void MovePlayer()
+    {
+        Vector2 playerInput = new Vector2(inputAxes.GetAxisHorizontal * movementSpeed, 0.0f);
+
+        if (!isClimbed && isGrounded)
+        {
+            rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
+            if (inputAxes.GetButtonDownJump && canJump)
+            {
+                timeStartLerp = Time.time;
+                isJumping = true;
+            }
+        }
+
+        if (rigidBody2D.velocity.x < -0.01f)
+        {
+            transform.rotation = Quaternion.Euler(0.0f, 180.0f, 0.0f);
+            lookToRight = false;
+        }
+        else if (rigidBody2D.velocity.x > 0.01f)
+        {
+            transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+            lookToRight = true;
+        }
+
+        float currentVelocity = !animator.GetBool(animatorParameters.holdWeapon) ? rigidBody2D.velocity.x : rigidBody2D.velocity.x * 0.5f;
+        animator.SetFloat(animatorParameters.movementSpeed, Abs(currentVelocity));
+    }    
+
     /// <summary>
     /// Executable method in animation Attack(A-D) as an event
     /// </summary>
@@ -284,7 +285,7 @@ sealed class PlayerController : MonoBehaviour
         canAttack = true;
         animator.SetFloat(animatorParameters.attackPattern, 0.0f);
     }
-
+#pragma warning restore IDE0051
     #endregion
 
     #region Inner classes
