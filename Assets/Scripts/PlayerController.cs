@@ -17,20 +17,22 @@ sealed class PlayerController : MonoBehaviour
     [SerializeField] private int attackPatterns = 4, hitPatterns = 2;
     [SerializeField] private LayerMask whatIsEnemy, whatIsGround;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
-    [SerializeField] private PlayerInput inputAxes;
     [SerializeField] private Transform floorCheck = null, ledgeCheck = null, jumpPointCheck = null;
+    [SerializeField] private RectTransform attackRT = null, jumpRT = null;
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
 
-    private bool canAttack, isClimbed, isGrounded, preJump, canJump, isJumping, isTouchingFloor, isTouchingLedge, lookToRight;
+    private bool canAttack, isClimbed, isGrounded, preJump, canJump, isJumping, cannotJump, isTouchingFloor, isTouchingLedge, lookToRight;
     private float currentAttackPatterns, currentHealthPoints, currentHitPatterns, percentage, timeStartLerp;
 
     private Animator animator = null;
+    private ButtonHandler attackButton = null, jumpButton = null;
     private CapsuleCollider2D capsuleCollider2D = null;
     private Coroutine currentCoroutine = null;
     private Rigidbody2D rigidBody2D = null;
     private SpriteRenderer spriteRenderer = null;
     private Vector2 climbEnd, jumpStart, jumpEnd;
 
+    internal float MaxHealthPoints { get { return maxHealthPoints; } }
     public static PlayerController Instance { get; private set; }
     #endregion
 
@@ -52,6 +54,9 @@ sealed class PlayerController : MonoBehaviour
         capsuleCollider2D = GetComponent<CapsuleCollider2D>();
         rigidBody2D = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+
+        attackButton = attackRT.GetComponent<ButtonHandler>();
+        jumpButton = jumpRT.GetComponent<ButtonHandler>();
     }
 
     private void Start()
@@ -68,7 +73,10 @@ sealed class PlayerController : MonoBehaviour
         currentHealthPoints = maxHealthPoints;
         currentAttackPatterns = attackPatterns + 0.4f;
         currentHitPatterns = hitPatterns + 0.4f;
+
+        UIHealthBar.Instance.UpdateHealthBar(currentHealthPoints);
     }
+
 
     private void FixedUpdate()
     {
@@ -90,7 +98,7 @@ sealed class PlayerController : MonoBehaviour
             Jump();
         }
 
-        if (inputAxes.GetButtonDownAttack && canAttack)
+        if (attackButton.isPressed && canAttack)
         {
             canAttack = false;
             Attack();
@@ -114,6 +122,8 @@ sealed class PlayerController : MonoBehaviour
     internal void ApplyDamage(float damage)
     {
         currentHealthPoints -= damage;
+        UIHealthBar.Instance.UpdateHealthBar(currentHealthPoints);
+
         animator.SetFloat(animatorParameters.hitPattern, Round(Random.Range(1.0f, currentHitPatterns)));
         Debug.Log($"Player's health points {currentHealthPoints}");
     }
@@ -151,13 +161,21 @@ sealed class PlayerController : MonoBehaviour
 
     private void Climb()
     {
-        if (!isTouchingLedge && isTouchingFloor && !isClimbed && inputAxes.GetButtonDownJump)
+        if (!isTouchingLedge && isTouchingFloor && !isClimbed && jumpButton.isPressed)
         {
             DisableComponents();
 
-            isClimbed = true;
+            if (lookToRight)
+            {
+                climbEnd = transform.position + (Vector3)climbPoint;
+            }
+            else
+            {
+                climbEnd.x = transform.position.x - climbPoint.x;
+                climbEnd.y = transform.position.y + climbPoint.y;
+            }
 
-            climbEnd = transform.position + (Vector3)climbPoint;
+            isClimbed = true;
         }
         if (isClimbed)
         {
@@ -250,12 +268,13 @@ sealed class PlayerController : MonoBehaviour
 
     private void MovePlayer()
     {
-        Vector2 playerInput = new Vector2(inputAxes.GetAxisHorizontal * movementSpeed, 0.0f);
+        Vector2 playerInput = new Vector2(JoystickController.Instance.Horizontal() * movementSpeed, 0.0f);
+        cannotJump = Linecast(transform.position, jumpPointCheck.position, whatIsGround);
 
         if (!isClimbed && isGrounded)
         {
             rigidBody2D.AddForce(playerInput, ForceMode2D.Impulse);
-            if (inputAxes.GetButtonDownJump && canJump)
+            if (jumpButton.isPressed && canJump && !cannotJump)
             {
                 timeStartLerp = Time.time;
                 isJumping = true;
@@ -275,7 +294,7 @@ sealed class PlayerController : MonoBehaviour
 
         float currentVelocity = !animator.GetBool(animatorParameters.holdWeapon) ? rigidBody2D.velocity.x : rigidBody2D.velocity.x * 0.5f;
         animator.SetFloat(animatorParameters.movementSpeed, Abs(currentVelocity));
-    }    
+    }
 
     /// <summary>
     /// Executable method in animation Attack(A-D) as an event
@@ -296,16 +315,6 @@ sealed class PlayerController : MonoBehaviour
         [SerializeField]
         internal string attackPattern = "AttackPattern", canClimb = "CanClimb", hitPattern = "HitPattern",
             holdWeapon = "HoldWeapon", isAlive = "IsAlive", isJumping = "IsJumping", movementSpeed = "MovementSpeed";
-    }
-
-    [System.Serializable]
-    sealed class PlayerInput
-    {
-        [SerializeField] internal string horizontalAxis = "Horizontal", jump = "Jump", attack = "Fire1";
-
-        internal bool GetButtonDownJump { get { return GetButtonDown(jump); } }
-        internal bool GetButtonDownAttack { get { return GetButtonDown(attack); } }
-        internal float GetAxisHorizontal { get { return GetAxis(horizontalAxis); } }
     }
     #endregion
 }

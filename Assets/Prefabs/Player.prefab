@@ -191,23 +191,19 @@ MonoBehaviour:
   checkGroundDistance: 0.8
   damage: 50
   hideWeaponTime: 5
+  jumpTime: 1.1
   ledgeCheckDistance: 0.36
   maxHealthPoints: 200
   movementSpeed: 1.8
   wallCheckDistance: 0.26
-  jumpTime: 1.1
   attackPatterns: 4
   hitPatterns: 2
-  climbPoint: {x: 0.3, y: 0.7}
   whatIsEnemy:
     serializedVersion: 2
     m_Bits: 256
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
-  floorCheck: {fileID: 6183999955192197541}
-  ledgeCheck: {fileID: 8542569937667888346}
-  jumpPointCheck: {fileID: 8479501930905977942}
   animatorParameters:
     attackPattern: AttackPattern
     canClimb: CanClimb
@@ -216,10 +212,12 @@ MonoBehaviour:
     isAlive: IsAlive
     isJumping: IsJumping
     movementSpeed: MovementSpeed
-  inputAxes:
-    horizontalAxis: Horizontal
-    jump: Jump
-    attack: Fire1
+  floorCheck: {fileID: 6183999955192197541}
+  ledgeCheck: {fileID: 8542569937667888346}
+  jumpPointCheck: {fileID: 8479501930905977942}
+  attackButton: {fileID: 0}
+  jumpButton: {fileID: 0}
+  climbPoint: {x: 0.3, y: 0.7}
 --- !u!1 &5603425915424777964
 GameObject:
   m_ObjectHideFlags: 0
