@@ -125,7 +125,6 @@ sealed class PlayerController : MonoBehaviour
         UIHealthBar.Instance.UpdateHealthBar(currentHealthPoints);
 
         animator.SetFloat(animatorParameters.hitPattern, Round(Random.Range(1.0f, currentHitPatterns)));
-        Debug.Log($"Player's health points {currentHealthPoints}");
     }
 
     private IEnumerator HideWeapon(float time)
