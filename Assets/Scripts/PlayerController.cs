@@ -13,7 +13,8 @@ sealed class PlayerController : MonoBehaviour
     #region Parameters
     [SerializeField]
     private float attackDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f, hideWeaponTime = 5.0f, jumpTime = 1.1f,
-        ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f;
+        ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f,
+        checkAboveDistance = 0.5f;
     [SerializeField] private int attackPatterns = 4, hitPatterns = 2;
     [SerializeField] private LayerMask whatIsEnemy, whatIsGround;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
@@ -21,7 +22,7 @@ sealed class PlayerController : MonoBehaviour
     [SerializeField] private RectTransform attackRT = null, jumpRT = null;
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
 
-    private bool canAttack, isClimbed, isGrounded, preJump, canJump, isJumping, cannotJump, isTouchingFloor, isTouchingLedge, lookToRight;
+    private bool canAttack, canJump, cannotJump, isClimbed, isGrounded, isJumping, isTouchingFloor, isTouchingLedge, lookToRight, overhead, preJump;
     private float currentAttackPatterns, currentHealthPoints, currentHitPatterns, percentage, timeStartLerp;
 
     private Animator animator = null;
@@ -62,7 +63,7 @@ sealed class PlayerController : MonoBehaviour
     private void Start()
     {
         canAttack = lookToRight = true;
-        isClimbed = preJump = isJumping = false;
+        overhead = isClimbed = preJump = isJumping = false;
 
         rigidBody2D.freezeRotation = true;
 
@@ -143,11 +144,10 @@ sealed class PlayerController : MonoBehaviour
     private void CheckEnvironment()
     {
         isGrounded = Raycast(transform.position, -transform.up, checkGroundDistance, whatIsGround);
-
-        isTouchingLedge = Raycast(ledgeCheck.position, ledgeCheck.position + ledgeCheck.right, ledgeCheckDistance, whatIsGround);
+        isTouchingLedge = Raycast(ledgeCheck.position, ledgeCheck.right, ledgeCheckDistance, whatIsGround);
         isTouchingFloor = Raycast(floorCheck.position, floorCheck.right, wallCheckDistance, whatIsGround);
-
         canJump = Raycast(jumpPointCheck.position, -jumpPointCheck.up, checkGroundDistance, whatIsGround);
+        overhead = Raycast(transform.position, transform.up, checkAboveDistance, whatIsGround);
     }
 
     /// <summary>
@@ -160,7 +160,7 @@ sealed class PlayerController : MonoBehaviour
 
     private void Climb()
     {
-        if (!isTouchingLedge && isTouchingFloor && !isClimbed && jumpButton.isPressed)
+        if (!isTouchingLedge && !overhead &&isTouchingFloor && !isClimbed && jumpButton.isPressed)
         {
             DisableComponents();
 

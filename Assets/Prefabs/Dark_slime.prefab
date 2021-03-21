@@ -24,7 +24,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 502955317470559485}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.25, y: -0.2, z: 0}
+  m_LocalPosition: {x: 0.15, y: -0.15, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 3390495203849559111}
@@ -54,7 +54,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1934158209750116003}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 1.0500002, y: 0, z: 0}
+  m_LocalPosition: {x: 0.525, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 3390495203849559111}
@@ -109,31 +109,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32b76c5133efdf94ca4760317f28ae0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  jump: 0
+  attackDistance: 0.3
+  damage: 5
+  groundCheckDistance: 0.25
+  idleTime: 2.5
+  jumpTime: 0.6
+  maxHealthPoints: 100
+  maxRandomTimeToIdle: 6
+  minRandomTimeToIdle: 2
+  movementSpeed: 1
+  playerCheckDistance: 2
+  wallCheckDistance: 0.3
+  attackPatterns: 3
   animatorParameters:
     attackValue: AttackValue
     isAlive: IsAlive
     isHit: IsHit
     isJumping: IsJumping
     movementSpeed: MovementSpeed
-  jump: 0
-  attackDistance: 0.6
-  damage: 5
-  groundCheckDistance: 0.5
-  idleTime: 2.5
-  maxHealthPoints: 100
-  movementSpeed: 1
-  playerCheckDistance: 4
-  wallCheckDistance: 0.3
-  jumpTime: 0.6
-  attackPatterns: 3
-  groundCheck: {fileID: 3500291250901049262}
-  jumpPointCheck: {fileID: 110167349055537892}
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
   whatIsPlayer:
     serializedVersion: 2
     m_Bits: 128
+  groundCheck: {fileID: 3500291250901049262}
+  jumpPointCheck: {fileID: 110167349055537892}
 --- !u!95 &6564087336962278469
 Animator:
   serializedVersion: 3
@@ -166,8 +168,8 @@ CapsuleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: -0.07}
-  m_Size: {x: 0.5, y: 0.5}
+  m_Offset: {x: 0.016000003, y: -0.061457895}
+  m_Size: {x: 0.21, y: 0.21}
   m_Direction: 0
 --- !u!50 &-6953543143240160483
 Rigidbody2D:

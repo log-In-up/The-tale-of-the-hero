@@ -49,31 +49,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32b76c5133efdf94ca4760317f28ae0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  jump: 1
+  attackDistance: 0.2
+  damage: 5
+  groundCheckDistance: 0.15
+  idleTime: 2.5
+  jumpTime: 0.85
+  maxHealthPoints: 100
+  maxRandomTimeToIdle: 6
+  minRandomTimeToIdle: 2
+  movementSpeed: 1
+  playerCheckDistance: 2
+  wallCheckDistance: 0.15
+  attackPatterns: 2
   animatorParameters:
     attackValue: AttackValue
     isAlive: IsAlive
     isHit: IsHit
-    movementSpeed: MovementSpeed
     isJumping: IsJumping
-  jump: 1
-  attackDistance: 0.4
-  damage: 5
-  groundCheckDistance: 0.3
-  idleTime: 2.5
-  maxHealthPoints: 100
-  movementSpeed: 1
-  playerCheckDistance: 4
-  wallCheckDistance: 0.3
-  jumpTime: 0.85
-  attackPatterns: 2
-  groundCheck: {fileID: 3860824241280616502}
-  jumpPointCheck: {fileID: 907898728998508076}
+    movementSpeed: MovementSpeed
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
   whatIsPlayer:
     serializedVersion: 2
     m_Bits: 128
+  groundCheck: {fileID: 3860824241280616502}
+  jumpPointCheck: {fileID: 907898728998508076}
 --- !u!95 &3369061295830752633
 Animator:
   serializedVersion: 3
@@ -106,8 +108,8 @@ CapsuleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: -0.02}
-  m_Size: {x: 0.2, y: 0.59}
+  m_Offset: {x: -0.013, y: -0.01}
+  m_Size: {x: 0.11, y: 0.31}
   m_Direction: 0
 --- !u!50 &7333153633066600003
 Rigidbody2D:
@@ -205,7 +207,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5550977901732469495}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 1.05, y: 0, z: 0}
+  m_LocalPosition: {x: 0.525, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 3369061295830752632}
@@ -235,7 +237,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8907922736092141034}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.2, y: -0.2, z: 0}
+  m_LocalPosition: {x: 0.1, y: -0.1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 3369061295830752632}
