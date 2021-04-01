@@ -1,12 +1,9 @@
 using System.Collections;
 using UnityEngine;
-using static UnityEngine.Input;
 using static UnityEngine.Mathf;
 using static UnityEngine.Physics2D;
 
-[RequireComponent(typeof(Animator))]
-[RequireComponent(typeof(CapsuleCollider2D))]
-[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Animator), typeof(CapsuleCollider2D), typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteRenderer))]
 sealed class PlayerController : MonoBehaviour
 {
@@ -160,7 +157,7 @@ sealed class PlayerController : MonoBehaviour
 
     private void Climb()
     {
-        if (!isTouchingLedge && !overhead &&isTouchingFloor && !isClimbed && jumpButton.isPressed)
+        if (!isTouchingLedge && !overhead && isTouchingFloor && !isClimbed && jumpButton.isPressed)
         {
             DisableComponents();
 
@@ -307,7 +304,6 @@ sealed class PlayerController : MonoBehaviour
     #endregion
 
     #region Inner classes
-
     [System.Serializable]
     sealed class PlayerAnimatorParameters
     {

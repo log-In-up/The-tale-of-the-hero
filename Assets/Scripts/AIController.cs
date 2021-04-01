@@ -3,9 +3,7 @@ using UnityEngine;
 using static UnityEngine.Mathf;
 using static UnityEngine.Physics2D;
 
-[RequireComponent(typeof(Animator))]
-[RequireComponent(typeof(CapsuleCollider2D))]
-[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Animator), typeof(CapsuleCollider2D), typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteRenderer))]
 sealed class AIController : MonoBehaviour
 {
@@ -292,7 +290,7 @@ sealed class AIController : MonoBehaviour
             Movement();
         }
 
-        if(Time.time > switchTime)
+        if (Time.time > switchTime)
         {
             switchTime = Time.time + randomTimeToIdle;
             Rotation();
