@@ -4,14 +4,13 @@ using static UnityEngine.Mathf;
 using static UnityEngine.Physics2D;
 
 [RequireComponent(typeof(Animator), typeof(CapsuleCollider2D), typeof(Rigidbody2D))]
-[RequireComponent(typeof(SpriteRenderer))]
 sealed class PlayerController : MonoBehaviour
 {
     #region Parameters
     [SerializeField]
-    private float attackDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f, hideWeaponTime = 5.0f, jumpTime = 1.1f,
-        ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f, movementSpeed = 2.5f, wallCheckDistance = 0.26f,
-        checkAboveDistance = 0.5f;
+    private float attackDistance = 0.5f, checkAboveDistance = 0.5f, checkGroundDistance = 0.4f, damage = 50.0f,
+        hideWeaponTime = 5.0f, jumpTime = 1.1f, ledgeCheckDistance = 0.56f, maxHealthPoints = 200.0f,
+        movementDeceleration = 0.5f, movementSpeed = 2.5f, wallCheckDistance = 0.26f;
     [SerializeField] private int attackPatterns = 4, hitPatterns = 2;
     [SerializeField] private LayerMask whatIsEnemy, whatIsGround;
     [SerializeField] private PlayerAnimatorParameters animatorParameters;
@@ -19,15 +18,20 @@ sealed class PlayerController : MonoBehaviour
     [SerializeField] private RectTransform attackRT = null, jumpRT = null;
     [SerializeField] private Vector2 climbPoint = new Vector2(0.3f, 0.73f);
 
-    private bool canAttack, canJump, cannotJump, isClimbed, isGrounded, isJumping, isTouchingFloor, isTouchingLedge, lookToRight, overhead, preJump;
-    private float currentAttackPatterns, currentHealthPoints, currentHitPatterns, percentage, timeStartLerp;
+    private bool canAttack, canJump, cannotJump, isClimbed, isGrounded, isJumping, isTouchingFloor, isTouchingLedge,
+        lookToRight, overhead, preJump;
+    private float currentAttackPatterns, currentHealthPoints, currentHitPatterns, percentage, timeStartLerp,
+        currentGravityScale;
+
+    private const float accelerationThreshold = 0.01f, expandRange = 0.4f, lookToLeftAngle = 180.0f, 
+        lookToRightAngle = 0.0f, maximumPercentage = 1.0f, minOfRange = 1.0f, minimumPercentage = 0.0f, zero = 0.0f,
+        zeroGravityScale = 0.0f;
 
     private Animator animator = null;
     private ButtonHandler attackButton = null, jumpButton = null;
     private CapsuleCollider2D capsuleCollider2D = null;
     private Coroutine currentCoroutine = null;
     private Rigidbody2D rigidBody2D = null;
-    private SpriteRenderer spriteRenderer = null;
     private Vector2 climbEnd, jumpStart, jumpEnd;
 
     internal float MaxHealthPoints { get { return maxHealthPoints; } }
@@ -51,7 +55,6 @@ sealed class PlayerController : MonoBehaviour
         animator = GetComponent<Animator>();
         capsuleCollider2D = GetComponent<CapsuleCollider2D>();
         rigidBody2D = GetComponent<Rigidbody2D>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
 
         attackButton = attackRT.GetComponent<ButtonHandler>();
         jumpButton = jumpRT.GetComponent<ButtonHandler>();
@@ -67,10 +70,11 @@ sealed class PlayerController : MonoBehaviour
         animator.SetBool(animatorParameters.isAlive, true);
         animator.SetBool(animatorParameters.holdWeapon, false);
 
-        percentage = 0.0f;
+        currentGravityScale = rigidBody2D.gravityScale;
+        percentage = minimumPercentage;
         currentHealthPoints = maxHealthPoints;
-        currentAttackPatterns = attackPatterns + 0.4f;
-        currentHitPatterns = hitPatterns + 0.4f;
+        currentAttackPatterns = attackPatterns + expandRange;
+        currentHitPatterns = hitPatterns + expandRange;
 
         UIHealthBar.Instance.UpdateHealthBar(currentHealthPoints);
     }
@@ -83,7 +87,7 @@ sealed class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if (currentHealthPoints <= 0.0f)
+        if (currentHealthPoints <= zero)
         {
             animator.SetBool(animatorParameters.isAlive, false);
             rigidBody2D.velocity = Vector2.zero;
@@ -91,7 +95,7 @@ sealed class PlayerController : MonoBehaviour
             return;
         }
 
-        if (isJumping && percentage <= 1.0f)
+        if (isJumping && percentage <= maximumPercentage)
         {
             Jump();
         }
@@ -122,7 +126,7 @@ sealed class PlayerController : MonoBehaviour
         currentHealthPoints -= damage;
         UIHealthBar.Instance.UpdateHealthBar(currentHealthPoints);
 
-        animator.SetFloat(animatorParameters.hitPattern, Round(Random.Range(1.0f, currentHitPatterns)));
+        animator.SetFloat(animatorParameters.hitPattern, Round(Random.Range(minOfRange, currentHitPatterns)));
     }
 
     private IEnumerator HideWeapon(float time)
@@ -134,7 +138,7 @@ sealed class PlayerController : MonoBehaviour
 
     private void Attack()
     {
-        float attackPattern = Round(Random.Range(1.0f, currentAttackPatterns));
+        float attackPattern = Round(Random.Range(minOfRange, currentAttackPatterns));
         animator.SetFloat(animatorParameters.attackPattern, attackPattern);
     }
 
@@ -152,7 +156,7 @@ sealed class PlayerController : MonoBehaviour
     /// </summary>
     private void ChangeHitPattern()
     {
-        animator.SetFloat(animatorParameters.hitPattern, 0.0f);
+        animator.SetFloat(animatorParameters.hitPattern, zero);
     }
 
     private void Climb()
@@ -198,13 +202,13 @@ sealed class PlayerController : MonoBehaviour
     {
         capsuleCollider2D.enabled = false;
         rigidBody2D.velocity = Vector2.zero;
-        rigidBody2D.gravityScale = 0.0f;
+        rigidBody2D.gravityScale = zeroGravityScale;
     }
 
     private void EnableComponents()
     {
         capsuleCollider2D.enabled = true;
-        rigidBody2D.gravityScale = 1.0f;
+        rigidBody2D.gravityScale = currentGravityScale;
     }
 
     /// <summary>
@@ -255,7 +259,7 @@ sealed class PlayerController : MonoBehaviour
     private void JumpEnd()
     {
         isJumping = preJump = false;
-        percentage = 0.0f;
+        percentage = minimumPercentage;
 
         animator.SetBool(animatorParameters.isJumping, isJumping);
 
@@ -264,7 +268,7 @@ sealed class PlayerController : MonoBehaviour
 
     private void MovePlayer()
     {
-        Vector2 playerInput = new Vector2(JoystickController.Instance.Horizontal() * movementSpeed, 0.0f);
+        Vector2 playerInput = new Vector2(JoystickController.Instance.Horizontal() * movementSpeed, zero);
         cannotJump = Linecast(transform.position, jumpPointCheck.position, whatIsGround);
 
         if (!isClimbed && isGrounded)
@@ -277,18 +281,18 @@ sealed class PlayerController : MonoBehaviour
             }
         }
 
-        if (rigidBody2D.velocity.x < -0.01f)
+        if (rigidBody2D.velocity.x < -accelerationThreshold)
         {
-            transform.rotation = Quaternion.Euler(0.0f, 180.0f, 0.0f);
+            transform.rotation = Quaternion.Euler(zero, lookToLeftAngle, zero);
             lookToRight = false;
         }
-        else if (rigidBody2D.velocity.x > 0.01f)
+        else if (rigidBody2D.velocity.x > accelerationThreshold)
         {
-            transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+            transform.rotation = Quaternion.Euler(zero, lookToRightAngle, zero);
             lookToRight = true;
         }
 
-        float currentVelocity = !animator.GetBool(animatorParameters.holdWeapon) ? rigidBody2D.velocity.x : rigidBody2D.velocity.x * 0.5f;
+        float currentVelocity = !animator.GetBool(animatorParameters.holdWeapon) ? rigidBody2D.velocity.x : rigidBody2D.velocity.x * movementDeceleration;
         animator.SetFloat(animatorParameters.movementSpeed, Abs(currentVelocity));
     }
 
@@ -298,7 +302,7 @@ sealed class PlayerController : MonoBehaviour
     private void NextPattern()
     {
         canAttack = true;
-        animator.SetFloat(animatorParameters.attackPattern, 0.0f);
+        animator.SetFloat(animatorParameters.attackPattern, zero);
     }
 #pragma warning restore IDE0051
     #endregion

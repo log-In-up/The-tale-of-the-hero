@@ -13,6 +13,9 @@ sealed class JoystickController : MonoBehaviour, IDragHandler, IPointerDownHandl
 
     private Image joystick, joystickController;
     private Vector2 joystickBias;
+
+    private const float zero = 0.0f, joystickMagnitude = 1.0f, joystickTransformDivisor = 2.0f;
+
     public static JoystickController Instance { get; private set; }
     #endregion
 
@@ -42,10 +45,10 @@ sealed class JoystickController : MonoBehaviour, IDragHandler, IPointerDownHandl
         {
             position.x /= joystick.rectTransform.sizeDelta.x;
 
-            joystickBias = new Vector2(position.x, 0.0f);
-            joystickBias = (joystickBias.magnitude > 1.0f) ? joystickBias.normalized : joystickBias;
+            joystickBias = new Vector2(position.x, zero);
+            joystickBias = (joystickBias.magnitude > joystickMagnitude) ? joystickBias.normalized : joystickBias;
 
-            joystickController.rectTransform.anchoredPosition = new Vector2(joystickBias.x * (joystick.rectTransform.sizeDelta.x / 2.0f), 0.0f);
+            joystickController.rectTransform.anchoredPosition = new Vector2(joystickBias.x * (joystick.rectTransform.sizeDelta.x / joystickTransformDivisor), zero);
         }
     }
 
@@ -62,12 +65,12 @@ sealed class JoystickController : MonoBehaviour, IDragHandler, IPointerDownHandl
 
     internal float Horizontal()
     {
-        if (joystickBias.x != 0)
+        if (joystickBias.x != zero)
         {
             return joystickBias.x;
         }
         else
-        { 
+        {
             return GetAxisRaw(horizontalAxis);
         }
     }

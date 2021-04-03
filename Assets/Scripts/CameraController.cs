@@ -22,6 +22,7 @@ sealed class CameraController : MonoBehaviour
             Instance = this;
         }
         #endregion
+
     }
 
     private void Update()

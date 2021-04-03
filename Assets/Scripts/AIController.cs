@@ -23,8 +23,14 @@ sealed class AIController : MonoBehaviour
     private AIState previousState;
 
     private bool canAttack, canJump, isGrounded, isIdle, lookToRight, playerDetected, wallDetected;
-    private float currentHealthPoints, lerpPercentage, randomAttackValue, randomTimeToIdle, switchTime, timeStartLerp;
+    private float currentHealthPoints, lerpPercentage, randomAttackValue, randomTimeToIdle, switchTime, timeStartLerp,
+        currentGravityScale;
     private sbyte facingDirection;
+
+    private const float zeroHealthPoints = 0.0f, maxPercentage = 1.0f, minPercentage = 0.0f, minGravityScale = 0.0f,
+        expandRange = 0.4f, zeroMovementSpeed = 0.0f, minOfRange = 1.0f, zero = 0.0f, rotationAngle = 180.0f,
+        zeroAttackValue = 0.0f;
+    private const int one = 1;
 
     private Animator animator = null;
     private CapsuleCollider2D capsuleCollider2D = null;
@@ -50,15 +56,16 @@ sealed class AIController : MonoBehaviour
         currentState = AIState.Idle;
         lookToRight = isIdle = true;
 
+        currentGravityScale = rigidBody2D.gravityScale;
         currentHealthPoints = maxHealthPoints;
-        timeStartLerp = lerpPercentage = 0.0f;
-        randomAttackValue = 1.0f;
-        facingDirection = 1;
+        timeStartLerp = lerpPercentage = zero;
+        randomAttackValue = one;
+        facingDirection = one;
     }
 
     private void Update()
     {
-        if (currentHealthPoints <= 0.0f)
+        if (currentHealthPoints <= zeroHealthPoints)
         {
             SwitchState(AIState.Dead);
         }
@@ -113,7 +120,7 @@ sealed class AIController : MonoBehaviour
             }
             else
             {
-                animator.SetFloat(animatorParameters.attackValue, 0.0f);
+                animator.SetFloat(animatorParameters.attackValue, zeroAttackValue);
                 if (jump && !isGrounded && canJump)
                 {
                     previousState = currentState;
@@ -148,7 +155,7 @@ sealed class AIController : MonoBehaviour
     {
         DisableComponents();
 
-        spriteRenderer.sortingOrder -= 1;
+        spriteRenderer.sortingOrder -= one;
 
         animator.SetBool(animatorParameters.isAlive, false);
     }
@@ -164,7 +171,7 @@ sealed class AIController : MonoBehaviour
 
         EnableComponents();
 
-        spriteRenderer.sortingOrder += 1;
+        spriteRenderer.sortingOrder += one;
 
         animator.SetBool(animatorParameters.isAlive, true);
     }
@@ -247,7 +254,7 @@ sealed class AIController : MonoBehaviour
 
     private void UpdateJumpState()
     {
-        if (lerpPercentage <= 1.0f)
+        if (lerpPercentage <= maxPercentage)
         {
             lerpPercentage = (Time.time - timeStartLerp) / jumpTime;
 
@@ -264,7 +271,7 @@ sealed class AIController : MonoBehaviour
         EnableComponents();
 
         animator.SetBool(animatorParameters.isJumping, false);
-        lerpPercentage = 0.0f;
+        lerpPercentage = minPercentage;
     }
     #endregion
 
@@ -273,7 +280,7 @@ sealed class AIController : MonoBehaviour
     {
         randomTimeToIdle = Random.Range(minRandomTimeToIdle, maxRandomTimeToIdle);
         isGrounded = wallDetected = false;
-        animator.SetFloat(animatorParameters.attackValue, 0.0f);
+        animator.SetFloat(animatorParameters.attackValue, zeroAttackValue);
     }
 
     private void UpdateWalkingState()
@@ -308,7 +315,7 @@ sealed class AIController : MonoBehaviour
     private void ExitWalkingState()
     {
         playerDetected = false;
-        animator.SetFloat(animatorParameters.movementSpeed, 0.0f);
+        animator.SetFloat(animatorParameters.movementSpeed, zeroMovementSpeed);
     }
     #endregion
     #endregion
@@ -347,13 +354,13 @@ sealed class AIController : MonoBehaviour
     {
         capsuleCollider2D.enabled = false;
         rigidBody2D.velocity = Vector2.zero;
-        rigidBody2D.gravityScale = 0.0f;
+        rigidBody2D.gravityScale = minGravityScale;
     }
 
     private void EnableComponents()
     {
         capsuleCollider2D.enabled = true;
-        rigidBody2D.gravityScale = 1.0f;
+        rigidBody2D.gravityScale = currentGravityScale;
     }
 
     private void Movement()
@@ -369,14 +376,14 @@ sealed class AIController : MonoBehaviour
     /// </summary>
     private void NextAttack()
     {
-        float maxValue = attackPatterns + 0.4f;
-        randomAttackValue = Round(Random.Range(1.0f, maxValue));
+        float maxValue = attackPatterns + expandRange;
+        randomAttackValue = Round(Random.Range(minOfRange, maxValue));
     }
 
     private void Rotation()
     {
-        facingDirection *= -1;
-        transform.Rotate(0.0f, 180.0f, 0.0f);
+        facingDirection *= -one;
+        transform.Rotate(zero, rotationAngle, zero);
 
         lookToRight = !lookToRight;
     }
