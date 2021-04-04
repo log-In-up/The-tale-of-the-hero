@@ -23,7 +23,7 @@ sealed class PlayerController : MonoBehaviour
     private float currentAttackPatterns, currentHealthPoints, currentHitPatterns, percentage, timeStartLerp,
         currentGravityScale;
 
-    private const float accelerationThreshold = 0.01f, expandRange = 0.4f, lookToLeftAngle = 180.0f, 
+    private const float accelerationThreshold = 0.01f, expandRange = 0.4f, lookToLeftAngle = 180.0f,
         lookToRightAngle = 0.0f, maximumPercentage = 1.0f, minOfRange = 1.0f, minimumPercentage = 0.0f, zero = 0.0f,
         zeroGravityScale = 0.0f;
 
@@ -41,16 +41,7 @@ sealed class PlayerController : MonoBehaviour
     #region MonoBehaviour API
     private void Awake()
     {
-        #region Singleton
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Instance = this;
-        }
-        #endregion
+        Instance = Singleton.GetSingleton(gameObject, Instance);
 
         animator = GetComponent<Animator>();
         capsuleCollider2D = GetComponent<CapsuleCollider2D>();

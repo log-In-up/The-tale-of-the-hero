@@ -22,16 +22,7 @@ sealed class JoystickController : MonoBehaviour, IDragHandler, IPointerDownHandl
     #region MonoBehaviour API
     private void Awake()
     {
-        #region Singleton
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Instance = this;
-        }
-        #endregion
+        Instance = Singleton.GetSingleton(gameObject, Instance);
 
         joystick = GetComponent<Image>();
         joystickController = stick.GetComponent<Image>();

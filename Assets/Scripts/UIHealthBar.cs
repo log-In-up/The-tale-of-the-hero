@@ -15,16 +15,7 @@ sealed class UIHealthBar : MonoBehaviour
     #region MonoBehaviour API
     private void Awake()
     {
-        #region Singleton
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Instance = this;
-        }
-        #endregion
+        Instance = Singleton.GetSingleton(gameObject, Instance);
     }
 
     private void Start()
